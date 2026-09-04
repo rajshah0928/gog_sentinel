@@ -1,0 +1,94 @@
+# Sentinel — Solution Presentation Outline
+
+Source material for the PPT/PDF deliverable. Each section below = roughly one slide.
+
+## 1. Title
+Sentinel — Unified Viewing & Metadata Analytics for Gujarat Police CCTV Integration
+Gujarat Police Innovation Challenge 2026 · Model 2
+
+## 2. Problem understanding
+- 26 departments, independent CCTV/VMS, heterogeneous vendors/storage/retention.
+- Central command centres need one view, not N separate viewers.
+- Existing high-value databases (VAHAN, eGujCop/CCTNS, AFIS/NAFIS) are siloed from
+  live video — no automated real-time correlation today.
+
+## 3. Solution model + justification
+- **Model 2: Unified Viewing & Metadata Analytics** — direct RTSP/ONVIF/vendor-API
+  connection to each camera/VMS, no federation/middleware layer, departmental systems
+  untouched.
+- Why: lowest integration risk, no dependency on any department changing their VMS or
+  storage; delivers the two capabilities the evaluation actually tests (live unified
+  view + AI vehicle tracing) without a multi-department federation program. See
+  `HLD.md` §1 for the full reasoning, including why Models 3/4 are out of scope given
+  the timeline.
+
+## 4. Architecture overview
+(Use the ASCII diagram in HLD.md §2 as the basis for a proper diagram — Departmental
+CCTV → Capture Layer → ANPR Pipeline → Watchlist/Alerting → Route Reconstruction →
+Unified Dashboard.)
+- Key point: no video is centrally stored — only structured detection metadata.
+
+## 5. Live stream ingestion — built for real-world gateway behavior
+- TCP-forced RTSP, PTS-derived timing (never wall clock / declared FPS), exponential
+  backoff reconnect, tolerant of decoder warm-up noise and mixed H.264/H.265.
+- Camera inventory always pulled live from the gateway — zero hardcoded camera IDs.
+- **Proven, not just designed**: tested against the live 30-camera Sentinel sandbox —
+  found and fixed a real cross-thread capture bug during load testing, confirmed
+  automatic recovery after a forced restart, and ran a clean multi-camera sustained
+  session with zero crashes and zero unwanted reconnects.
+
+## 6. AI-powered video analytics
+- ANPR (mandatory analytic): pretrained YOLO-class detector + EasyOCR, CPU-only,
+  configurable frame sampling for real-time feasibility on commodity hardware (no GPU
+  required — built and validated on a 40-core CPU box).
+- Indian-plate-aware OCR confusion handling (0/O, 1/I, 5/S, 8/B, 2/Z).
+- Configurable tiled-detection mode for cameras where plates are small/distant.
+- Honest note: general-purpose wide-angle traffic cameras (like most of the sandbox
+  grid) aren't always plate-resolvable at distance — matches real-world ANPR practice
+  of pairing wide coverage cameras with dedicated close-range capture points. (HLD §5)
+
+## 7. Watchlist correlation + real-time alerting
+- Every OCR read (not sampled after the fact) is normalized and matched — exact +
+  confusion-aware pass, then fuzzy-similarity fallback.
+- Match → alert written with camera, plate, PTS timestamp, confidence, matched entry
+  — visible in the dashboard within seconds, no manual refresh.
+- Designed to plug into VAHAN / eGujCop-CCTNS as the real watchlist source in
+  production (HLD §4); our own representative watchlist used for this demo, as
+  explicitly permitted.
+
+## 8. Vehicle route reconstruction — the evaluation's core test
+- Given a plate, return every (camera, location, timestamp) detection in chronological
+  order — this is exactly what "trace a designated vehicle across the grid" requires.
+- Demo: [insert real trace result from testing — camera IDs + timestamps + locations].
+
+## 9. Unified dashboard
+- Live alert feed (auto-refreshing), camera grid with last-seen plate per camera,
+  plate search/trace view, watchlist admin, camera map.
+- Screenshot(s) here.
+
+## 10. Tech stack
+- Capture: OpenCV + FFmpeg backend (Python)
+- Detection: Ultralytics YOLO (pretrained, CPU)
+- OCR: EasyOCR
+- Storage: SQLite (pilot scale; schema-compatible upgrade path to PostgreSQL)
+- Dashboard: Streamlit
+- No GPU / no external message bus required for this prototype's scale — deliberately
+  minimal-dependency for fast, reliable deployment.
+
+## 11. Scalability, security, deployment (summary — full detail in HLD §7)
+- Horizontal scale-out: independent capture/ANPR workers, sharded by camera set.
+- Edge pre-filtering and GPU/accelerator path for 80,000-camera scale.
+- Credentials never logged; consume-only design (never pushes to or controls any
+  gateway); RBAC/audit logging as the production hardening path.
+- No department's existing VMS, storage, or retention policy is touched.
+
+## 12. Operational benefits / impact
+- Single pane of glass across departments without a multi-year federation project.
+- Automated, continuous watchlist correlation — proactive alerting instead of manual
+  after-the-fact video review.
+- Fast path to statewide expansion: same architecture, more camera shards, no redesign.
+
+## 13. What's next (roadmap, honest about current scope)
+- FRS and other analytics (explicitly out of scope for this build, bonus territory).
+- VAHAN/eGujCop live integration (currently a representative demo watchlist).
+- Edge deployment pilot for bandwidth-constrained districts.

@@ -1,0 +1,19 @@
+[project]
+name = "sentinel-hackathon"
+version = "0.1.0"
+description = "Gujarat Police Innovation Challenge 2026 - Model 2 unified viewing & ANPR analytics prototype"
+requires-python = ">=3.11"
+dependencies = [
+    "opencv-python>=4.9",
+    "numpy>=1.26",
+    "requests>=2.32",
+    "ultralytics>=8.2",
+    "easyocr>=1.7",
+    "streamlit>=1.35",
+    "streamlit-autorefresh>=1.0",
+    "rapidfuzz>=3.9",
+    "pandas>=2.2",
+    "huggingface_hub>=0.24",
+]
+
+[tool.uv]
