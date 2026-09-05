@@ -120,32 +120,97 @@ evaluation.
 - **Detection:** a pretrained, CPU-feasible YOLO-nano-class plate detector (not trained
   from scratch, given the timeline — see the presentation for the licensing note on
   the specific pretrained weights used).
-- **OCR:** EasyOCR on the cropped plate region, with a light upscale + contrast
-  normalization pass before recognition (plates are often small in a wide-angle
-  traffic-junction frame — this recovers some signal without needing a dedicated
-  super-resolution model, which would not be CPU-affordable at real-time rates).
-  Tiled full-frame detection (re-running the detector per-region at native resolution
-  instead of one downscaled whole-frame pass) is available as a configurable,
-  per-camera option for cameras where plates are consistently too small for a single
-  pass to find — at the cost of proportionally more CPU per sampled frame.
+- **OCR:** PaddleOCR (PP-OCRv6) on the cropped plate region, upscaled before
+  recognition — see the methodology note below for why this replaced our initial
+  choice of EasyOCR, and with what evidence.
 - **Sample rate:** every Nth frame is processed (configurable), not every frame —
   necessary for real-time CPU-only throughput across multiple concurrent camera feeds
   on commodity hardware, and sufficient because a vehicle is visible across many
   consecutive frames as it crosses a camera's field of view.
+- **Tiled full-frame detection** (re-running the detector per-region at native
+  resolution instead of one downscaled whole-frame pass) is available as a
+  configurable, per-camera option for cameras where plates are consistently too small
+  for a single pass to find — at the cost of proportionally more CPU per sampled
+  frame.
 
-**Honest finding from testing against the live 30-camera sandbox grid:** most cameras
-in this particular grid are wide-angle, overhead traffic-junction cameras (optimized
-for scene coverage and incident/traffic monitoring, not close-range plate capture).
-At that framing and typical nighttime lighting, plates on distant vehicles are
-frequently not resolvable by any detector — this is a real, industry-recognized
-limitation of general-purpose traffic CCTV, not a defect in the pipeline. Production
-ANPR deployments normally pair this kind of wide-area viewing with a smaller number of
-dedicated, close-range ANPR gantry/bollard cameras at chokepoints (toll plazas,
-checkpoints, junction approach lanes) for reliable plate capture, while the wide-area
-cameras continue to serve their existing purpose (situational awareness, incident
-review). We recommend the same pairing for the statewide design: this platform's
-unified viewer works identically over both camera types, and the ANPR pipeline
-automatically benefits wherever close-range coverage exists.
+### Methodology note: how we found and fixed our own plate-legibility gap
+
+This is worth documenting in detail because it is exactly the kind of practical,
+evidence-driven iteration the evaluation is looking for, not just a design choice made
+on paper.
+
+**Finding 1 — camera angle, not just camera count, determines ANPR viability.**
+Initial testing sampled cameras more or less in catalogue order and found mostly
+wide-angle, overhead traffic-junction cameras (optimized for scene coverage and
+incident monitoring, not close-range plate capture) — plates on distant vehicles were
+frequently not resolvable at any zoom, which is a real, industry-recognized limitation
+of general-purpose traffic CCTV, not a pipeline defect. Rather than accept that as a
+grid-wide verdict, we went back to the camera catalogue's own naming (`cameras.json`
+gives a human display name per camera) and looked for signal in it: one entry named
+"Tri Mandir Adalaj Tollnaka" ("Tollnaka" = toll plaza in Gujarati) stood out as a
+plausibly close-range, purpose-different camera class. It was — testing it directly
+gave us the first genuinely legible plate crop we had seen, a truck stopped at the toll
+barrier, front-on, no obstruction. **Lesson for the statewide design:** camera
+metadata/naming conventions are a cheap, high-value signal for triaging which cameras
+in a large heterogeneous grid are ANPR-viable versus purely for situational viewing —
+worth standardizing on onboarding (see §8).
+
+**Finding 2 — OCR engine choice, evidenced not assumed.** On that same legible crop,
+our initial OCR engine (EasyOCR) never exceeded ~0.2–0.4 confidence across extensive
+preprocessing tuning (multiple upscale factors, unsharp masking, detection-threshold
+tuning). We swapped to PaddleOCR (PP-OCRv6) on the identical crop, no other changes,
+and got a full read at **0.87 confidence**. (One infrastructure snag along the way:
+PaddleOCR's default MKL-DNN CPU acceleration crashed outright on this host with a
+native oneDNN/PIR runtime error — disabling it, `enable_mkldnn=False`, fixed that; pure
+CPU inference without it is somewhat slower but correct, which is the right tradeoff at
+our current frame-sampling rate.)
+
+**Finding 3 — the real remaining bug was in our own bounding-box crop, not the OCR
+engine.** Even after the OCR swap, running the *actual* pipeline (detector's own output
+box → crop → OCR) still failed, while our hand-cropped test image succeeded. The
+detector's tight bounding box was clipping characters at the edge — enough to break
+OCR outright even though the plate was otherwise legible. We swept padding fractions
+against the real detector output (not a synthetic test) and found padding the box by
+75% of its own width/height is a genuine sweet spot: less padding still clips
+characters, and (counterintuitively) more padding (100%+) pulls in enough surrounding
+clutter to confuse OCR again. This is now the default in `PlateBox.crop()`.
+
+**Result, verified through the actual pipeline classes (not a standalone script) on
+live sandbox footage:** detector confidence 0.42, OCR confidence 0.79–0.96 depending on
+the vehicle, full plausible Indian plates read correctly (e.g. `GJ05AU9828`, a valid
+Gujarat-format plate, read at 0.96 OCR confidence; the same physical vehicle's plate
+read as `BV2807`/`8V2807`/`EV2807` across five independent detections within 16 seconds
+— a useful cross-check that the pipeline isn't just getting lucky once, and see below
+for what that variation itself surfaced). Over a multi-hour unattended run against this
+one toll-plaza camera, the pipeline logged 47+ detections clearing the OCR confidence
+threshold, the large majority of them fully plausible plate strings rather than
+fragments.
+
+**Finding 4 — the same real-vehicle data surfaced two further matching bugs, both
+fixed.** The `BV2807`/`8V2807`/`EV2807` variation above wasn't just a curiosity — running
+it through our own watchlist-matching and route-reconstruction code broke both of them,
+in different ways:
+- `watchlist/matcher.py`'s OCR-confusion-variant generator used `str.replace()`, which
+  substitutes *every* occurrence of a character in a string. On `8V2807` (which
+  contains two `8`s — one a misread `B`, one a genuine digit), this corrupted the real
+  digit too and produced `BV2B07`, not the intended `BV2807` — so a genuine watchlist
+  hit would have been silently missed. Fixed to swap one character position at a time.
+- `vehicle_trace/route_reconstruction.py`'s plate search matched the *exact* normalized
+  string only, so searching for `BV2807` returned only 2 of the vehicle's 4
+  confusion-linked detections, under-reporting its route. Fixed to search across the
+  same confusion-variant set used by watchlist matching.
+
+Full detail, before/after evidence, and the honest boundary of what confusion-variant
+matching can and can't catch (it does not treat `E`↔`B` as a confusion, since they
+aren't visually similar characters — that miss is deliberate, not an oversight) is in
+`docs/evidence/trace_demonstration.md`.
+
+**Production implication:** we recommend pairing wide-area situational cameras with a
+smaller number of dedicated, close-range ANPR gantry/bollard cameras at chokepoints
+(toll plazas, checkpoints, junction approach lanes) for reliable plate capture — this
+platform's unified viewer works identically over both camera types, and the ANPR
+pipeline automatically benefits wherever close-range coverage already exists, exactly
+as demonstrated here.
 
 ## 6. Alert notification workflow
 

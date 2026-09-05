@@ -38,14 +38,26 @@ Unified Dashboard.)
   session with zero crashes and zero unwanted reconnects.
 
 ## 6. AI-powered video analytics
-- ANPR (mandatory analytic): pretrained YOLO-class detector + EasyOCR, CPU-only,
+- ANPR (mandatory analytic): pretrained YOLO-class detector + PaddleOCR, CPU-only,
   configurable frame sampling for real-time feasibility on commodity hardware (no GPU
   required — built and validated on a 40-core CPU box).
 - Indian-plate-aware OCR confusion handling (0/O, 1/I, 5/S, 8/B, 2/Z).
 - Configurable tiled-detection mode for cameras where plates are small/distant.
-- Honest note: general-purpose wide-angle traffic cameras (like most of the sandbox
-  grid) aren't always plate-resolvable at distance — matches real-world ANPR practice
-  of pairing wide coverage cameras with dedicated close-range capture points. (HLD §5)
+- **The debugging story is the strongest evidence slide we have** — walk through it
+  live, don't just state the conclusion (HLD §5 has full detail + numbers):
+  1. Most sandbox cameras are wide-angle junction cams, genuinely not plate-resolvable
+     at distance — an honest, real finding, not a failure.
+  2. Went back to the camera catalogue's own naming and found a toll-plaza camera
+     ("Tollnaka") — camera *metadata*, not just camera count, is the actionable signal.
+  3. On that camera's legible plate crop, our first OCR engine (EasyOCR) capped at
+     ~0.3 confidence after heavy tuning; swapping to PaddleOCR on the identical crop
+     got 0.87 with no other change.
+  4. Even then, the *real* pipeline still failed — root cause was our own bounding-box
+     crop clipping characters. Fixed by padding the detector's box by 75% of its own
+     size, verified against the actual detector output, not a hand-cropped image.
+  5. Result over a multi-hour unattended run: 43 detections above threshold, most of
+     them full plausible Indian plates (e.g. `GJ05AU9828` at 0.96 confidence; the same
+     vehicle's `BV2807` read consistently across 3 independent passes).
 
 ## 7. Watchlist correlation + real-time alerting
 - Every OCR read (not sampled after the fact) is normalized and matched — exact +
@@ -59,7 +71,10 @@ Unified Dashboard.)
 ## 8. Vehicle route reconstruction — the evaluation's core test
 - Given a plate, return every (camera, location, timestamp) detection in chronological
   order — this is exactly what "trace a designated vehicle across the grid" requires.
-- Demo: [insert real trace result from testing — camera IDs + timestamps + locations].
+- Demo: [insert real multi-camera trace once captured — as of this writing we have a
+  strong single-camera repeat-sighting example (plate `BV2807`, camera cam12, 3
+  independent detections a few seconds apart, 0.86-0.94 OCR confidence each) but not
+  yet a confirmed same-plate sighting across 2+ different cameras — see open items].
 
 ## 9. Unified dashboard
 - Live alert feed (auto-refreshing), camera grid with last-seen plate per camera,
@@ -69,7 +84,7 @@ Unified Dashboard.)
 ## 10. Tech stack
 - Capture: OpenCV + FFmpeg backend (Python)
 - Detection: Ultralytics YOLO (pretrained, CPU)
-- OCR: EasyOCR
+- OCR: PaddleOCR (PP-OCRv6)
 - Storage: SQLite (pilot scale; schema-compatible upgrade path to PostgreSQL)
 - Dashboard: Streamlit
 - No GPU / no external message bus required for this prototype's scale — deliberately

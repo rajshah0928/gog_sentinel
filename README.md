@@ -49,7 +49,7 @@ streamlit run dashboard/app.py
 ## Repo layout
 
 - `capture/` — resilient per-camera RTSP capture (TCP-forced, PTS-timestamped, auto-reconnect)
-- `analytics/` — plate detection (YOLO) + OCR (EasyOCR) pipeline
+- `analytics/` — plate detection (YOLO) + OCR (PaddleOCR) pipeline
 - `watchlist/` — SQLite schema, fuzzy plate matching, alert generation
 - `vehicle_trace/` — route reconstruction (plate → ordered camera/location/timestamp history)
   (named `vehicle_trace`, not `trace`, to avoid shadowing Python's stdlib `trace` module)

@@ -36,17 +36,31 @@ def normalize_plate(raw_text: str) -> str:
 
 def _confusion_variants(plate: str) -> set[str]:
     """
-    Generates a small set of plausible OCR-confusion variants of a
-    normalized plate, so an exact-match fast path can catch the common
-    single-character confusions without a full fuzzy scan.
+    Generates plausible OCR-confusion variants of a normalized plate by
+    swapping one character position at a time, so an exact-match fast path
+    can catch the common single-character confusions without a full fuzzy
+    scan.
+
+    Deliberately per-position, not str.replace(): replace() substitutes
+    every occurrence of a character in the string, so on a plate like
+    "8V2807" (two '8's — one meant as a letter, one a genuine digit),
+    replace("8","B") corrupts the real digit too, producing "BV2B07"
+    instead of the intended "BV2807" — a real bug found via a live
+    detection (the same physical vehicle's plate OCR'd as EV2807, 8V2807,
+    and BV2807 within seconds of each other; only the position-aware
+    version below correctly links all three back to one plate).
     """
-    variants = {plate}
+    confusable = {a for a, _ in _CONFUSION_PAIRS} | {b for _, b in _CONFUSION_PAIRS}
+    pair_map: dict[str, str] = {}
     for a, b in _CONFUSION_PAIRS:
-        new_variants = set()
-        for v in variants:
-            new_variants.add(v.replace(a, b))
-            new_variants.add(v.replace(b, a))
-        variants |= new_variants
+        pair_map[a] = b
+        pair_map[b] = a
+
+    variants = {plate}
+    for i, ch in enumerate(plate):
+        if ch in confusable:
+            swapped = plate[:i] + pair_map[ch] + plate[i + 1:]
+            variants.add(swapped)
     return variants
 
 

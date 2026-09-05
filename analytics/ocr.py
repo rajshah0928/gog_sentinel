@@ -1,10 +1,18 @@
 """
-OCR on cropped plate regions using EasyOCR.
+OCR on cropped plate regions using PaddleOCR.
 
-EasyOCR is chosen over PaddleOCR here for simpler CPU-only install (pure
-pip, no paddle wheel headaches) and adequate accuracy on plate-sized crops;
-swap in PaddleOCR by changing only this module if it proves clearly better
-in demo testing.
+Switched from EasyOCR after head-to-head testing on real sandbox footage:
+on a genuinely legible plate crop (toll-plaza camera, close-range truck),
+EasyOCR topped out around 0.2-0.4 confidence on partial fragments across
+extensive preprocessing tuning (scale sweeps, unsharp masking, threshold
+tuning), while PaddleOCR (PP-OCRv6) read the full plate at 0.87 confidence
+on the same source crop, no special preprocessing beyond upscaling.
+
+Requires enable_mkldnn=False — with MKL-DNN acceleration on, PaddleOCR's
+text detector crashes on this host with a native oneDNN/PIR runtime error
+(NotImplementedError: ConvertPirAttribute2RuntimeAttribute...). Pure-CPU
+inference without MKL-DNN is slower but actually works; given our frame
+sample rate this tradeoff is fine.
 """
 from __future__ import annotations
 
@@ -19,8 +27,6 @@ import numpy as np
 
 logger = logging.getLogger("sentinel.ocr")
 
-_ALLOWED_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
 
 @dataclass
 class OcrResult:
@@ -30,25 +36,29 @@ class OcrResult:
 
 class PlateOCR:
     """
-    Lazily initializes EasyOCR's reader (loads model weights on first use).
-    A single instance is shared across per-camera worker threads in
+    Lazily initializes PaddleOCR (loads model weights on first use). A
+    single instance is shared across per-camera worker threads in
     AnprPipeline, so both lazy init and inference are serialized with a
-    lock, for the same reason as PlateDetector: avoid a racy double-init
-    and concurrent calls into the underlying torch model from multiple
-    threads.
+    lock — the underlying paddle model is not documented as safe for
+    concurrent calls from multiple threads on one instance.
     """
 
-    def __init__(self, languages: list[str] = None, gpu: bool = False):
-        self._languages = languages or ["en"]
-        self._gpu = gpu
+    def __init__(self, lang: str = "en"):
+        self._lang = lang
         self._reader = None
         self._lock = threading.Lock()
 
     def _ensure_reader(self):
         if self._reader is None:
-            import easyocr  # deferred import: loading torch/easyocr is slow
-            logger.info("Loading EasyOCR reader (languages=%s, gpu=%s)", self._languages, self._gpu)
-            self._reader = easyocr.Reader(self._languages, gpu=self._gpu)
+            from paddleocr import PaddleOCR  # deferred import: slow to load
+            logger.info("Loading PaddleOCR reader (lang=%s)", self._lang)
+            self._reader = PaddleOCR(
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                lang=self._lang,
+                enable_mkldnn=False,
+            )
         return self._reader
 
     def read_plate(self, plate_crop_bgr: np.ndarray) -> Optional[OcrResult]:
@@ -64,22 +74,23 @@ class PlateOCR:
 
         with self._lock:
             reader = self._ensure_reader()
-            results = reader.readtext(
-                preprocessed,
-                allowlist=_ALLOWED_CHARS,
-                detail=1,
-                paragraph=False,
-            )
+            results = list(reader.predict(preprocessed))
+
         if not results:
             return None
 
-        # Multiple text fragments can appear (state code split from number,
-        # e.g. "GJ 05" / "AB 1234") - concatenate in reading order (left to
-        # right by box x-position) and average confidence.
-        results.sort(key=lambda r: r[0][0][0])  # sort by top-left x of box
-        text = "".join(r[1] for r in results)
+        texts: list[str] = []
+        scores: list[float] = []
+        for r in results:
+            texts.extend(r.get("rec_texts", []))
+            scores.extend(r.get("rec_scores", []))
+
+        if not texts:
+            return None
+
+        text = "".join(texts)
         text = re.sub(r"[^A-Z0-9]", "", text.upper())
-        avg_conf = sum(r[2] for r in results) / len(results)
+        avg_conf = sum(scores) / len(scores) if scores else 0.0
 
         if not text:
             return None
@@ -88,15 +99,16 @@ class PlateOCR:
 
 def _preprocess_for_ocr(crop_bgr: np.ndarray) -> np.ndarray:
     """
-    Upscales small crops (plates are often small in a wide CCTV frame) and
-    applies light contrast normalization to help OCR on low-quality footage.
+    Upscales small crops (plates are often small in a wide CCTV frame).
+    Kept in color, not grayscale+CLAHE — testing showed CLAHE on small,
+    JPEG-noisy crops amplified block artifacts more than it helped text
+    edges; PaddleOCR's own preprocessing handles contrast internally.
     """
     h, w = crop_bgr.shape[:2]
-    target_h = 64
+    target_h = 240  # empirically the scale that worked in testing (~6x on a ~40px source)
     if h < target_h:
         scale = target_h / max(h, 1)
-        crop_bgr = cv2.resize(crop_bgr, (int(w * scale), target_h), interpolation=cv2.INTER_CUBIC)
-
-    gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
-    gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
-    return gray
+        crop_bgr = cv2.resize(
+            crop_bgr, (int(w * scale), target_h), interpolation=cv2.INTER_LANCZOS4,
+        )
+    return crop_bgr

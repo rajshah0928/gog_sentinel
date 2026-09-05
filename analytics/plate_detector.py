@@ -25,10 +25,23 @@ class PlateBox:
     y2: int
     confidence: float
 
-    def crop(self, frame: np.ndarray) -> np.ndarray:
+    def crop(self, frame: np.ndarray, pad_frac: float = 0.75) -> np.ndarray:
+        """
+        Crops the plate region with a margin around the detector's box.
+        Real-footage testing (toll-plaza camera, live sandbox) found the
+        tight detector box clips enough of the plate that OCR fails
+        outright even on an otherwise-legible plate; a swept comparison on
+        that same real detection found 0.75x padding is a genuine sweet
+        spot — too little still clips characters, too much (>=1.0x) pulls
+        in enough surrounding clutter to confuse OCR again. Verified via
+        analytics/ocr.py against the actual detector output, not a
+        hand-cropped image.
+        """
         h, w = frame.shape[:2]
-        x1, y1 = max(0, self.x1), max(0, self.y1)
-        x2, y2 = min(w, self.x2), min(h, self.y2)
+        box_w, box_h = self.x2 - self.x1, self.y2 - self.y1
+        pad_x, pad_y = int(box_w * pad_frac), int(box_h * pad_frac)
+        x1, y1 = max(0, self.x1 - pad_x), max(0, self.y1 - pad_y)
+        x2, y2 = min(w, self.x2 + pad_x), min(h, self.y2 + pad_y)
         return frame[y1:y2, x1:x2]
 
 
