@@ -1,8 +1,8 @@
 # Sentinel ANPR Detection Report
 
-Generated: 2026-09-05T05:32:06.341410+00:00
+Generated: 2026-09-05T05:58:41.335230+00:00
 
-Total detections in log: 58
+Total detections in log: 76
 
 ## Alerts (watchlist matches)
 
@@ -14,6 +14,24 @@ Total detections in log: 58
 
 | Plate | Camera | Location | OCR Conf | Detector Conf | PTS (ms) |
 |---|---|---|---|---|---|
+| RJ20CF2562 | cam22 | 28 BK Mervada tran Rasta | 1.00 | 0.61 | 158 |
+| 083 | cam06 | 06 Timbavadi gate-Junagadh | 0.89 | 0.60 | 271 |
+| GJA1157 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.94 | 0.62 | 34629532 |
+| GJA1157 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.93 | 0.62 | 34629282 |
+| GJ31 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.56 | 0.61 | 34628682 |
+| GJ01KB5765 | cam06 | 06 Timbavadi gate-Junagadh | 0.90 | 0.61 | 237 |
+| GJ01BK9850 | cam06 | 06 Timbavadi gate-Junagadh | 0.97 | 0.68 | 211 |
+| GJ18GB1371 | cam22 | 28 BK Mervada tran Rasta | 0.96 | 0.62 | 85 |
+| 6J08AY3301 | cam22 | 28 BK Mervada tran Rasta | 0.96 | 0.74 | 78 |
+| GJ00002379 | cam22 | 28 BK Mervada tran Rasta | 0.94 | 0.61 | 56 |
+| ONEHEEX | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.54 | 0.64 | 34294832 |
+| GJ12005869 | cam22 | 28 BK Mervada tran Rasta | 0.96 | 0.63 | 36 |
+| 6142040 | cam06 | 06 Timbavadi gate-Junagadh | 0.70 | 0.55 | 134 |
+| GJ098L3843 | cam22 | 28 BK Mervada tran Rasta | 0.96 | 0.62 | 8 |
+| R11T | cam06 | 06 Timbavadi gate-Junagadh | 0.42 | 0.60 | 90 |
+| GJ | cam06 | 06 Timbavadi gate-Junagadh | 0.95 | 0.42 | 72 |
+| 16006 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.75 | 0.51 | 33699732 |
+| SNLI | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.56 | 0.50 | 33266032 |
 | R1158010 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.66 | 0.54 | 33112682 |
 | 0001V9794 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.88 | 0.61 | 33002682 |
 | 0001V9784 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.92 | 0.61 | 32900782 |
