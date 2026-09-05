@@ -1,13 +1,13 @@
 # Sentinel — Government-Feed Output Report
 
-Generated: 2026-09-05T19:06:18.258890+00:00
+Generated: 2026-09-05T19:24:28.756166+00:00
 
 Detected vehicles/plates with corresponding timestamps, from the live Sentinel Gujarat sandbox feed (government-provided cameras). Every row is a real detection from the running ANPR pipeline — not simulated or replayed.
 
 ## Summary
 
-- **Total detections:** 915
-- **Plausible plate reads:** 740 (81% of total) — passes a loose alphanumeric shape check (6-11 characters, contains both letters and digits); the remainder are short OCR fragments, non-plate on-screen text, or the one known overlay-text false positive noted below
+- **Total detections:** 932
+- **Plausible plate reads:** 755 (81% of total) — passes a loose alphanumeric shape check (6-11 characters, contains both letters and digits); the remainder are short OCR fragments, non-plate on-screen text, or the one known overlay-text false positive noted below
 - **Cameras onboarded:** cam01, cam02, cam03, cam06, cam12, cam22
 - **Watchlist alerts generated:** 2
 - **Cross-camera trace evidence:** no plate has yet been confirmed on two different cameras (checked exact + OCR-confusion-variant matching across all plausible-length plates). Strongest trace evidence to date: plate `BV2807` detected 4 times on camera(s) cam12, correctly linked across OCR-confusion variants (see `trace_demonstration.md` for full detail)
@@ -932,3 +932,20 @@ Detected vehicles/plates with corresponding timestamps, from the live Sentinel G
 | GJ01KH7519316 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:05:43 UTC | 74% | 57% |  |  |
 | ARTIOIIZZ | cam12 | 12 Tri Mandir Adalaj Tollnaka | 2026-09-05 19:05:58 UTC | 74% | 56% |  |  |
 | GJ08FA0432 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:06:13 UTC | 99% | 62% |  |  |
+| G102B03285 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:06:20 UTC | 94% | 65% |  |  |
+| GJ08DG3644 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:06:23 UTC | 93% | 61% |  |  |
+| GJ24AF9826 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:07:20 UTC | 100% | 64% |  |  |
+| TATA | cam12 | 12 Tri Mandir Adalaj Tollnaka | 2026-09-05 19:08:14 UTC | 97% | 45% |  |  |
+| GJ08DN4325 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:08:33 UTC | 92% | 62% |  |  |
+| GJ08EA2166 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:09:23 UTC | 94% | 65% |  |  |
+| GJ2411065 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:09:35 UTC | 89% | 66% |  |  |
+| GJ10EH2105 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:10:56 UTC | 100% | 62% |  |  |
+| WWWIAH10 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:12:53 UTC | 68% | 42% |  |  |
+| GJ02EG9559 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:13:01 UTC | 100% | 63% |  |  |
+| SJ01KF8753 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:16:31 UTC | 99% | 46% |  |  |
+| GJ02ER3549 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:16:53 UTC | 99% | 68% |  |  |
+| GROUN2001103062 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 2026-09-05 19:17:01 UTC | 63% | 62% |  |  |
+| GJ24A03957 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:19:05 UTC | 99% | 59% |  |  |
+| GJ08BH4062 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:19:34 UTC | 93% | 52% |  |  |
+| MH02DG2284 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:20:16 UTC | 88% | 66% |  |  |
+| GJ12FB3366 | cam22 | 28 BK Mervada tran Rasta | 2026-09-05 19:24:22 UTC | 96% | 61% |  |  |

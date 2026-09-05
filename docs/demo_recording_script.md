@@ -33,14 +33,14 @@ real-time alert generation. Must look like a working system, not a mockup.
    in real time." Optionally also show `main.py`'s terminal log scrolling alongside it.
 4. **(45s) Watchlist correlation** — Switch to the dashboard's Watchlist tab, show
    the seeded entries. Say: "We maintain a representative watchlist — plate, reason,
-   category." Then switch to the Search/Trace tab, search a plate you know is in
-   both the watchlist and the detections (check `docs/evidence/detection_report.md`
-   for a real example, e.g. search `GJ05AU9828`), show the route/detection result
-   appearing.
+   category." Then switch to the Search/Trace tab and search `GJ11BH7992` (a real,
+   repeatedly-detected vehicle with a genuine plate-crop image attached) — show the
+   route/detection result appearing as a visual timeline.
 5. **(30s) Real-time alert generation** — Switch to the Live Alerts tab. Say: "When
    a detected plate matches the watchlist, an alert is generated automatically — no
    human in the loop — with the camera, location, and timestamp." Point out the
-   alert row and its fields (camera_id, timestamp, match confidence).
+   `GJ11BH7992` alert card and its real plate-crop image, camera, timestamp, and
+   100% match confidence.
 6. **(15s) Close** — "Everything shown here is live, unrehearsed data from the
    actual camera feed — no recorded-and-replayed footage, no mockup."
 
@@ -49,16 +49,11 @@ fresh first — see below) for concrete plate numbers/timestamps you can referen
 name while narrating, so the demo doesn't feel like you're improvising.
 
 Regenerate the evidence report right before recording so it reflects the latest live
-data:
+data (this now also gives you a fresh summary + plate list to reference by name):
 ```bash
 cd /home/raj/GoG_Hack/sentinel-hackathon
 source .venv/bin/activate
-python3 -c "
-import sys; sys.path.insert(0, '.')
-from watchlist.db import recent_detections, recent_alerts
-for d in recent_detections(limit=15):
-    print(d['plate'], d['camera_id'], round(d['ocr_confidence'],2))
-"
+python3 docs/build_output_report.py
 ```
 
 ---
@@ -86,58 +81,28 @@ not just narrating the same thing twice.
    [camera name/location from cameras.json]."
 4. **(20s)** Close.
 
-**Output report:** submit `docs/evidence/detection_report.md` (regenerate it fresh
-right before submission) alongside the video — it already lists every detected plate
-with camera, location, OCR confidence, and PTS timestamp, which is exactly what's
-required. Convert to PDF if the submission portal wants a single file:
+**Output report:** submit `docs/evidence/Output_Report.pdf` (regenerate it fresh right
+before submission) alongside the video. It already includes a summary block (total
+detections, plausible-plate count, watchlist alerts, cross-camera trace status) above
+the full per-plate table with camera, location, timestamp, and confidence — plus the
+one known overlay-text false positive clearly flagged rather than hidden. The CSV
+(`output_report.csv`) and Markdown (`output_report.md`) versions are generated
+alongside it if the portal prefers a different format:
 ```bash
 cd /home/raj/GoG_Hack/sentinel-hackathon
-python3 -c "
-import sys; sys.path.insert(0, '.')
-from watchlist.db import recent_detections, recent_alerts
-from datetime import datetime, timezone
-dets = recent_detections(limit=500)
-alerts = recent_alerts(limit=100)
-with open('docs/evidence/detection_report.md', 'w') as f:
-    f.write('# Sentinel ANPR Detection Report\n\n')
-    f.write(f'Generated: {datetime.now(timezone.utc).isoformat()}\n\n')
-    f.write(f'Total detections: {len(dets)}\n\n')
-    f.write('## Alerts\n\n| Plate | Camera | Location | Match Conf | Category | Reason |\n|---|---|---|---|---|---|\n')
-    for a in alerts:
-        f.write(f\"| {a['plate']} | {a['camera_id']} | {a['location']} | {a['match_confidence']:.1f} | {a['category']} | {a['reason']} |\n\")
-    f.write('\n## Detections\n\n| Plate | Camera | Location | OCR Conf | Detector Conf | PTS (ms) |\n|---|---|---|---|---|---|\n')
-    for d in dets:
-        f.write(f\"| {d['plate']} | {d['camera_id']} | {d['location']} | {d['ocr_confidence']:.2f} | {d['detector_confidence']:.2f} | {d['pts_ms']:.0f} |\n\")
-print('regenerated')
-"
+source .venv/bin/activate
+python3 docs/build_output_report.py
 ```
-Then open the `.md` in a browser/editor and print-to-PDF, or paste into a doc.
 
 ---
 
 ## Before you record — sanity checklist
 
 - [ ] Dashboard loads at http://103.190.242.24:8501 from your machine
-- [ ] Live Alerts tab shows at least 1 real alert (currently: yes, `GJ05AU9828`)
+- [ ] Live Alerts tab shows the `GJ11BH7992` alert with its real plate-crop image
 - [ ] Watchlist tab shows seeded entries
-- [ ] Search tab returns a real result for a plate you'll mention by name
+- [ ] Search tab returns a real result for `GJ11BH7992` (or any plate you'll mention
+      by name — regenerate the output report first to find a fresh one if you want a
+      different example)
 - [ ] Terminal showing `main.py` logs is visible/switchable during recording, if you
       want to show raw log output as evidence of "live," not just the polished UI
-
-## While you're in the browser anyway — grab these for the HLD/PPT
-
-I can't screenshot the live dashboard myself (no display access in this
-environment), so please grab these during the recording session and drop the image
-files into `docs/evidence/` (any filename, I'll wire them into the HLD/PPT after):
-
-- [ ] Live Alerts tab with the `GJ05AU9828` alert visible (now shows the plate crop
-      image alongside the alert, not just a table row)
-- [ ] **Detection Feed tab** — this is the strongest evidence screenshot: shows the
-      plate crop, the full annotated frame with bounding box + OCR overlay, and the
-      confidence scores side by side for several real recent detections
-- [ ] Search/Trace tab showing a plate search result (e.g. `BV2807` — should show
-      4 chronologically-ordered detections from the confusion-variant fix), now
-      rendered as a visual timeline with crop thumbnails
-- [ ] Cameras tab — now shows visual cards with a thumbnail of each camera's
-      last-seen plate, not a plain table
-- [ ] Watchlist tab showing the seeded entries
