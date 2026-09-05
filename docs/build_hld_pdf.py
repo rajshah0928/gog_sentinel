@@ -4,10 +4,11 @@ Renders docs/HLD.md into a properly formatted PDF for submission
 headless-Chromium print-to-PDF, so headings, tables, code blocks, and
 bold/italic all render as a real document rather than raw markdown text.
 
+No logo or watermark - plain document.
+
 Run from repo root:
     python docs/build_hld_pdf.py
 """
-import sys
 from pathlib import Path
 
 import markdown
@@ -16,20 +17,11 @@ DOCS_DIR = Path(__file__).resolve().parent
 MD_PATH = DOCS_DIR / "HLD.md"
 HTML_PATH = DOCS_DIR / "_hld_render.html"
 PDF_PATH = DOCS_DIR / "Sentinel_HLD.pdf"
-RUVISION_LOGO = DOCS_DIR / "evidence" / "ruvision_logo_small.png"
 
 
 def main():
     md_text = MD_PATH.read_text()
-    body_html = markdown.markdown(
-        md_text, extensions=["tables", "fenced_code", "toc"]
-    )
-
-    logo_tag = ""
-    if RUVISION_LOGO.exists():
-        import base64
-        b64 = base64.b64encode(RUVISION_LOGO.read_bytes()).decode()
-        logo_tag = f'<img src="data:image/png;base64,{b64}" class="brand-logo">'
+    body_html = markdown.markdown(md_text, extensions=["tables", "fenced_code", "toc"])
 
     html = f"""<!doctype html><html><head><meta charset="utf-8">
     <style>
@@ -43,13 +35,6 @@ def main():
             color: #1a1a1a;
             font-size: 11px;
             line-height: 1.55;
-        }}
-        .brand-logo {{
-            position: fixed; top: 6mm; right: 18mm; height: 9mm;
-        }}
-        .doc-title {{
-            font-size: 10px; color: #888; text-transform: uppercase;
-            letter-spacing: 0.06em; margin-bottom: 4px;
         }}
         h1 {{
             font-size: 22px; color: #0a0e14; margin-bottom: 2px;
@@ -86,15 +71,12 @@ def main():
         .cover h1 {{ border: none; font-size: 34px; margin-bottom: 8px; }}
         .cover .subtitle {{ font-size: 15px; color: #3b82f6; margin-bottom: 30px; }}
         .cover .meta {{ font-size: 11px; color: #666; }}
-        .cover .company {{ font-size: 12px; color: #888; margin-top: 60px; }}
     </style></head><body>
-    {logo_tag}
     <div class="cover">
         <h1>Sentinel</h1>
         <div class="subtitle">Unified Viewing &amp; Metadata Analytics — Model 2</div>
         <div class="meta">Technical Proposal — High-Level Design (HLD)<br>
         Gujarat Police Innovation Challenge 2026</div>
-        <div class="company">Prepared by RuVision Thinking Labs</div>
     </div>
     {body_html}
     </body></html>"""
