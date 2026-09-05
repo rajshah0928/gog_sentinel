@@ -71,15 +71,23 @@ Unified Dashboard.)
 ## 8. Vehicle route reconstruction — the evaluation's core test
 - Given a plate, return every (camera, location, timestamp) detection in chronological
   order — this is exactly what "trace a designated vehicle across the grid" requires.
-- Demo: [insert real multi-camera trace once captured — as of this writing we have a
-  strong single-camera repeat-sighting example (plate `BV2807`, camera cam12, 3
-  independent detections a few seconds apart, 0.86-0.94 OCR confidence each) but not
-  yet a confirmed same-plate sighting across 2+ different cameras — see open items].
+- Screenshot: dashboard Search/Trace tab, plate `BV2807` (see
+  `docs/demo_recording_script.md` — grab this during the demo recording).
+- Evidence: `docs/evidence/trace_demonstration.md` — a real vehicle, detected 4 times
+  by the live pipeline within 16 seconds, correctly linked despite OCR reading it as
+  both `BV2807` and `8V2807` (the confusion-variant fix, found via this exact data,
+  is described there with before/after numbers).
+- Honest status: two cameras (`cam12`, `cam22`) are independently confirmed
+  ANPR-viable and running simultaneously as of this writing; no same-plate sighting
+  across both has landed yet — real traffic timing, not a code limitation. If one
+  lands before submission, lead with it here instead.
 
 ## 9. Unified dashboard
 - Live alert feed (auto-refreshing), camera grid with last-seen plate per camera,
   plate search/trace view, watchlist admin, camera map.
-- Screenshot(s) here.
+- Screenshots: Live Alerts tab, Search/Trace tab, Watchlist tab, Cameras tab — all
+  captured live during the demo recording (see `docs/demo_recording_script.md`), not
+  mockups.
 
 ## 10. Tech stack
 - Capture: OpenCV + FFmpeg backend (Python)

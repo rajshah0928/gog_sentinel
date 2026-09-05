@@ -122,3 +122,16 @@ Then open the `.md` in a browser/editor and print-to-PDF, or paste into a doc.
 - [ ] Search tab returns a real result for a plate you'll mention by name
 - [ ] Terminal showing `main.py` logs is visible/switchable during recording, if you
       want to show raw log output as evidence of "live," not just the polished UI
+
+## While you're in the browser anyway — grab these for the HLD/PPT
+
+I can't screenshot the live dashboard myself (no display access in this
+environment), so please grab these during the recording session and drop the image
+files into `docs/evidence/` (any filename, I'll wire them into the HLD/PPT after):
+
+- [ ] Live Alerts tab with the `GJ05AU9828` alert visible
+- [ ] Search/Trace tab showing a plate search result (e.g. `BV2807` — should show
+      4 chronologically-ordered detections from the confusion-variant fix)
+- [ ] Watchlist tab showing the seeded entries
+- [ ] Cameras tab showing the real camera list (proves it's pulled live, not
+      hardcoded)
