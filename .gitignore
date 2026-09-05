@@ -6,6 +6,7 @@ __pycache__/
 *.db-shm
 config/camera_cache.json
 tests/sample_footage/
+dashboard/evidence_images/
 .env
 .env.*
 *.log

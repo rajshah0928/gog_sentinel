@@ -24,6 +24,8 @@ class RouteStop:
     pts_ms: float
     wall_clock_s: float
     ocr_confidence: float
+    plate: str = ""
+    crop_path: str | None = None
 
     @property
     def wall_clock_iso(self) -> str:
@@ -60,6 +62,8 @@ def reconstruct_route(plate: str) -> list[RouteStop]:
             pts_ms=r["pts_ms"],
             wall_clock_s=r["wall_clock_s"],
             ocr_confidence=r["ocr_confidence"],
+            plate=r["plate"],
+            crop_path=r["crop_path"] if "crop_path" in r.keys() else None,
         )
         for r in rows_by_id.values()
     ]

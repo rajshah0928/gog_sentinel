@@ -21,8 +21,9 @@ from config.settings import (
     PLATE_DETECTOR_TILE_SIZE,
     PLATE_DETECTOR_TILE_OVERLAP,
 )
-from watchlist.db import DetectionRecord, log_detection
+from watchlist.db import DetectionRecord, log_detection, update_detection_images
 from watchlist.alerting import process_detection_for_alerts
+from dashboard.evidence_capture import save_crop, save_annotated_frame
 
 logger = logging.getLogger("sentinel.anpr_pipeline")
 
@@ -129,6 +130,21 @@ class AnprWorker:
                 "[%s] plate read: %s (ocr_conf=%.2f, det_conf=%.2f, pts=%.0fms)",
                 self.camera_id, ocr_result.text, ocr_result.confidence, box.confidence, frame_obj.pts_ms,
             )
+
+            # Visual evidence for the dashboard — a side effect on an
+            # already-confirmed detection, never affects detection/OCR/
+            # matching. Failures here are logged and swallowed inside
+            # evidence_capture itself, so a disk/image error can't break
+            # the detection pipeline.
+            crop_path = save_crop(self.camera_id, detection_id, crop)
+            annotated_path = save_annotated_frame(
+                self.camera_id, detection_id, frame_obj.image,
+                box.x1, box.y1, box.x2, box.y2,
+                ocr_result.text, ocr_result.confidence,
+            )
+            if crop_path or annotated_path:
+                update_detection_images(detection_id, crop_path, annotated_path)
+
             process_detection_for_alerts(detection_id, rec)
 
 
