@@ -24,12 +24,13 @@ real-time alert generation. Must look like a working system, not a mockup.
    Cameras tab in the dashboard, listing real cameras with their names/locations.
    Say: "The platform pulls its camera list live from the gateway — nothing is
    hardcoded."
-3. **(45s) AI detection/analytics running** — Open a terminal and show `main.py`'s
-   live log output scrolling (STATUS lines, `plate read:` lines appearing in real
-   time). Say: "This is a real YOLO-based plate detector and PaddleOCR reading
-   actual license plates from live video, right now, on this camera." Point out a
-   specific full-plate read in the log if one appears (e.g. `GJ05AU9828` or similar)
-   and its confidence score.
+3. **(45s) AI detection/analytics running** — Switch to the dashboard's new
+   **Detection Feed** tab: this shows the plate crop AND the full annotated frame
+   (green bounding box + OCR text/confidence drawn directly on it) for each recent
+   detection, updating live. This is the most convincing visual evidence in the whole
+   demo — say: "Here's the actual plate crop and the full camera frame with the AI's
+   bounding box drawn on it, next to the OCR-read text and confidence score, updating
+   in real time." Optionally also show `main.py`'s terminal log scrolling alongside it.
 4. **(45s) Watchlist correlation** — Switch to the dashboard's Watchlist tab, show
    the seeded entries. Say: "We maintain a representative watchlist — plate, reason,
    category." Then switch to the Search/Trace tab, search a plate you know is in
@@ -129,9 +130,14 @@ I can't screenshot the live dashboard myself (no display access in this
 environment), so please grab these during the recording session and drop the image
 files into `docs/evidence/` (any filename, I'll wire them into the HLD/PPT after):
 
-- [ ] Live Alerts tab with the `GJ05AU9828` alert visible
+- [ ] Live Alerts tab with the `GJ05AU9828` alert visible (now shows the plate crop
+      image alongside the alert, not just a table row)
+- [ ] **Detection Feed tab** — this is the strongest evidence screenshot: shows the
+      plate crop, the full annotated frame with bounding box + OCR overlay, and the
+      confidence scores side by side for several real recent detections
 - [ ] Search/Trace tab showing a plate search result (e.g. `BV2807` — should show
-      4 chronologically-ordered detections from the confusion-variant fix)
+      4 chronologically-ordered detections from the confusion-variant fix), now
+      rendered as a visual timeline with crop thumbnails
+- [ ] Cameras tab — now shows visual cards with a thumbnail of each camera's
+      last-seen plate, not a plain table
 - [ ] Watchlist tab showing the seeded entries
-- [ ] Cameras tab showing the real camera list (proves it's pulled live, not
-      hardcoded)
