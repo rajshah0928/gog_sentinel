@@ -34,7 +34,7 @@ Resilient Capture Layer  (capture/)
 ANPR Analytics Pipeline  (analytics/)
   - configurable frame sampling (every Nth frame) for CPU-only feasibility
   - YOLO-class plate detector (pretrained, CPU inference)
-  - EasyOCR on cropped plate regions, with Indian-plate OCR-confusion normalization
+  - PaddleOCR on cropped plate regions, with Indian-plate OCR-confusion normalization
         ▼
 Watchlist Correlation + Alerting  (watchlist/)
   - SQLite watchlist (plate, reason/category, date added)
