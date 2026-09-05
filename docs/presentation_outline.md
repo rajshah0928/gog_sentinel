@@ -55,15 +55,24 @@ Unified Dashboard.)
   4. Even then, the *real* pipeline still failed — root cause was our own bounding-box
      crop clipping characters. Fixed by padding the detector's box by 75% of its own
      size, verified against the actual detector output, not a hand-cropped image.
-  5. Result over a multi-hour unattended run: 43 detections above threshold, most of
-     them full plausible Indian plates (e.g. `GJ05AU9828` at 0.96 confidence; the same
-     vehicle's `BV2807` read consistently across 3 independent passes).
+  5. Result over a multi-hour unattended run: 480+ detections above threshold across
+     three independently-confirmed cameras, the large majority full plausible Indian
+     plates (e.g. `GJ05AU9828` at 0.96 confidence; the same vehicle's `BV2807` read
+     consistently across 3 independent passes).
+- **Screenshot: `docs/evidence/detection_feed.png`** — real crop + real annotated frame
+  (green bounding box drawn by the actual detector, OCR text/confidence overlaid) for
+  two different real vehicles (`J02EKU873`, `GJ11CD3491`), captured live from the
+  running dashboard, not staged. This is the single strongest evidence image in the
+  whole deck — lead the analytics section with it.
 
 ## 7. Watchlist correlation + real-time alerting
 - Every OCR read (not sampled after the fact) is normalized and matched — exact +
   confusion-aware pass, then fuzzy-similarity fallback.
 - Match → alert written with camera, plate, PTS timestamp, confidence, matched entry
   — visible in the dashboard within seconds, no manual refresh.
+- Screenshot: `docs/evidence/alert.png` — a real watchlist match (`GJ11BH7992`, 100%
+  match confidence) shown with its actual plate crop, camera, location, and timestamp,
+  live on the dashboard.
 - Designed to plug into VAHAN / eGujCop-CCTNS as the real watchlist source in
   production (HLD §4); our own representative watchlist used for this demo, as
   explicitly permitted.
@@ -71,23 +80,27 @@ Unified Dashboard.)
 ## 8. Vehicle route reconstruction — the evaluation's core test
 - Given a plate, return every (camera, location, timestamp) detection in chronological
   order — this is exactly what "trace a designated vehicle across the grid" requires.
-- Screenshot: dashboard Search/Trace tab, plate `BV2807` (see
-  `docs/demo_recording_script.md` — grab this during the demo recording).
+- Screenshot: `docs/evidence/trace.png` — a real search result rendered as a visual
+  timeline with the plate crop shown at the sighting.
 - Evidence: `docs/evidence/trace_demonstration.md` — a real vehicle, detected 4 times
   by the live pipeline within 16 seconds, correctly linked despite OCR reading it as
   both `BV2807` and `8V2807` (the confusion-variant fix, found via this exact data,
   is described there with before/after numbers).
-- Honest status: two cameras (`cam12`, `cam22`) are independently confirmed
-  ANPR-viable and running simultaneously as of this writing; no same-plate sighting
-  across both has landed yet — real traffic timing, not a code limitation. If one
-  lands before submission, lead with it here instead.
+- Honest status: three cameras (`cam12`, `cam06`, `cam22`) are independently confirmed
+  ANPR-viable and ran simultaneously for hours accumulating 480+ real detections; a
+  comprehensive check (exact + confusion-variant matching) found no same-plate sighting
+  across two different cameras yet — real traffic timing and this sandbox's specific
+  camera mix, not a code limitation. If one lands before submission, lead with it
+  instead.
 
 ## 9. Unified dashboard
 - Live alert feed (auto-refreshing), camera grid with last-seen plate per camera,
   plate search/trace view, watchlist admin, camera map.
-- Screenshots: Live Alerts tab, Search/Trace tab, Watchlist tab, Cameras tab — all
-  captured live during the demo recording (see `docs/demo_recording_script.md`), not
-  mockups.
+- Screenshots (all real, captured live from the running dashboard):
+  `docs/evidence/alert.png` (Live Alerts), `docs/evidence/detection_feed.png`
+  (Detection Feed — the strongest visual evidence), `docs/evidence/trace.png`
+  (Search/Trace), `docs/evidence/camera_feed.png` (Cameras),
+  `docs/evidence/watchlist.png` (Watchlist).
 
 ## 10. Tech stack
 - Capture: OpenCV + FFmpeg backend (Python)
