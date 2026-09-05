@@ -181,10 +181,13 @@ the vehicle, full plausible Indian plates read correctly (e.g. `GJ05AU9828`, a v
 Gujarat-format plate, read at 0.96 OCR confidence; the same physical vehicle's plate
 read as `BV2807`/`8V2807`/`EV2807` across five independent detections within 16 seconds
 — a useful cross-check that the pipeline isn't just getting lucky once, and see below
-for what that variation itself surfaced). Over a multi-hour unattended run against this
-one toll-plaza camera, the pipeline logged 47+ detections clearing the OCR confidence
-threshold, the large majority of them fully plausible plate strings rather than
-fragments.
+for what that variation itself surfaced). This isn't limited to one camera: running the
+pipeline simultaneously against three independently-confirmed ANPR-viable cameras
+(`cam12` the toll plaza, `cam06` a gate camera, `cam22` a bypass-road camera) over a
+multi-hour unattended run produced 139+ detections clearing the OCR confidence
+threshold across all three — including full plausible plates on each (e.g.
+`GJ2832AGOC` at 0.95 confidence on `cam06`) — the large majority fully plausible plate
+strings rather than fragments, once the fixes above were in place.
 
 **Finding 4 — the same real-vehicle data surfaced two further matching bugs, both
 fixed.** The `BV2807`/`8V2807`/`EV2807` variation above wasn't just a curiosity — running

@@ -1,8 +1,8 @@
 # Sentinel ANPR Detection Report
 
-Generated: 2026-09-05T05:58:41.335230+00:00
+Generated: 2026-09-05T06:24:56.335579+00:00
 
-Total detections in log: 76
+Total detections in log: 141
 
 ## Alerts (watchlist matches)
 
@@ -14,6 +14,71 @@ Total detections in log: 76
 
 | Plate | Camera | Location | OCR Conf | Detector Conf | PTS (ms) |
 |---|---|---|---|---|---|
+| GJ08DP5116 | cam22 | 28 BK Mervada tran Rasta | 0.98 | 0.66 | 645 |
+| GJ01HY5808 | cam22 | 28 BK Mervada tran Rasta | 0.91 | 0.67 | 643 |
+| GJOBDHG | cam22 | 28 BK Mervada tran Rasta | 0.73 | 0.60 | 613 |
+| GJ32AA4855 | cam06 | 06 Timbavadi gate-Junagadh | 1.00 | 0.66 | 669 |
+| A118211188 | cam22 | 28 BK Mervada tran Rasta | 0.76 | 0.68 | 569 |
+| GO080H1293 | cam22 | 28 BK Mervada tran Rasta | 0.79 | 0.63 | 567 |
+| GJ08AP5947 | cam22 | 28 BK Mervada tran Rasta | 0.99 | 0.63 | 562 |
+| GJ08AP5947 | cam22 | 28 BK Mervada tran Rasta | 1.00 | 0.60 | 562 |
+| GJ02DN7462 | cam22 | 28 BK Mervada tran Rasta | 0.92 | 0.56 | 542 |
+| CE0B0L1 | cam22 | 28 BK Mervada tran Rasta | 0.55 | 0.66 | 541 |
+| GJ2832AGOC | cam06 | 06 Timbavadi gate-Junagadh | 0.95 | 0.69 | 639 |
+| GJ08BS2556 | cam22 | 28 BK Mervada tran Rasta | 0.97 | 0.69 | 533 |
+| GJ08BN0077 | cam22 | 28 BK Mervada tran Rasta | 0.85 | 0.58 | 524 |
+| GJ27CF6002 | cam22 | 28 BK Mervada tran Rasta | 1.00 | 0.63 | 504 |
+| GJ08BB3420 | cam22 | 28 BK Mervada tran Rasta | 0.98 | 0.60 | 495 |
+| GJ02DP1709 | cam22 | 28 BK Mervada tran Rasta | 0.94 | 0.64 | 461 |
+| GJ3ZAG0028 | cam06 | 06 Timbavadi gate-Junagadh | 0.94 | 0.71 | 557 |
+| UP16BH4196 | cam22 | 28 BK Mervada tran Rasta | 0.95 | 0.63 | 451 |
+| PUP16 | cam22 | 28 BK Mervada tran Rasta | 0.68 | 0.49 | 450 |
+| GJ01RE0022 | cam22 | 28 BK Mervada tran Rasta | 0.98 | 0.67 | 440 |
+| 610810N258 | cam22 | 28 BK Mervada tran Rasta | 0.82 | 0.63 | 436 |
+| 0J08K6180 | cam22 | 28 BK Mervada tran Rasta | 0.75 | 0.51 | 431 |
+| GJ08DP1172 | cam22 | 28 BK Mervada tran Rasta | 0.99 | 0.64 | 430 |
+| FGJ03M87213 | cam06 | 06 Timbavadi gate-Junagadh | 0.92 | 0.63 | 503 |
+| GJ03M87213 | cam06 | 06 Timbavadi gate-Junagadh | 0.91 | 0.63 | 501 |
+| 0022179 | cam22 | 28 BK Mervada tran Rasta | 0.74 | 0.52 | 387 |
+| GJ16BG2786 | cam22 | 28 BK Mervada tran Rasta | 0.98 | 0.65 | 385 |
+| 1090A05 | cam22 | 28 BK Mervada tran Rasta | 0.89 | 0.48 | 384 |
+| EIZLNEG3 | cam06 | 06 Timbavadi gate-Junagadh | 0.60 | 0.63 | 481 |
+| GJ11CL9466 | cam06 | 06 Timbavadi gate-Junagadh | 0.94 | 0.65 | 481 |
+| 108 | cam22 | 28 BK Mervada tran Rasta | 0.95 | 0.75 | 369 |
+| GJ03M97213 | cam06 | 06 Timbavadi gate-Junagadh | 0.85 | 0.61 | 472 |
+| GJ03MB7213 | cam06 | 06 Timbavadi gate-Junagadh | 0.83 | 0.63 | 472 |
+| G1SARA | cam06 | 06 Timbavadi gate-Junagadh | 0.50 | 0.42 | 471 |
+| EGJ03MB7213 | cam06 | 06 Timbavadi gate-Junagadh | 0.59 | 0.62 | 457 |
+| PGJDGN87213 | cam06 | 06 Timbavadi gate-Junagadh | 0.75 | 0.54 | 457 |
+| GJ03N97213 | cam06 | 06 Timbavadi gate-Junagadh | 0.83 | 0.58 | 453 |
+| GJ03N87213 | cam06 | 06 Timbavadi gate-Junagadh | 0.86 | 0.64 | 453 |
+| 6313RIM | cam06 | 06 Timbavadi gate-Junagadh | 0.47 | 0.63 | 445 |
+| GJ03N37213 | cam06 | 06 Timbavadi gate-Junagadh | 0.83 | 0.64 | 445 |
+| 6J088N5641 | cam22 | 28 BK Mervada tran Rasta | 0.93 | 0.58 | 336 |
+| GJ03N37213 | cam06 | 06 Timbavadi gate-Junagadh | 0.96 | 0.64 | 444 |
+| 6J10GRRAN | cam06 | 06 Timbavadi gate-Junagadh | 0.58 | 0.64 | 444 |
+| PGJ03MM7213 | cam06 | 06 Timbavadi gate-Junagadh | 0.69 | 0.60 | 436 |
+| GJ03M97213 | cam06 | 06 Timbavadi gate-Junagadh | 0.87 | 0.62 | 436 |
+| GJ03N7213 | cam06 | 06 Timbavadi gate-Junagadh | 0.56 | 0.61 | 433 |
+| GJO2EA2T08 | cam22 | 28 BK Mervada tran Rasta | 0.69 | 0.43 | 320 |
+| FGJ03M87213 | cam06 | 06 Timbavadi gate-Junagadh | 0.87 | 0.60 | 428 |
+| GJ03MB7213 | cam06 | 06 Timbavadi gate-Junagadh | 0.87 | 0.65 | 426 |
+| GJ115A0232 | cam06 | 06 Timbavadi gate-Junagadh | 0.91 | 0.50 | 419 |
+| GJ03M87213 | cam06 | 06 Timbavadi gate-Junagadh | 0.94 | 0.64 | 419 |
+| 6J45439 | cam06 | 06 Timbavadi gate-Junagadh | 0.58 | 0.45 | 409 |
+| GJ06PG7144J | cam22 | 28 BK Mervada tran Rasta | 0.96 | 0.50 | 295 |
+| HH03DV1858 | cam22 | 28 BK Mervada tran Rasta | 0.91 | 0.68 | 290 |
+| GJ24AF3761 | cam22 | 28 BK Mervada tran Rasta | 1.00 | 0.68 | 273 |
+| GJ32AG0028 | cam06 | 06 Timbavadi gate-Junagadh | 0.85 | 0.57 | 373 |
+| GJ03MB7213 | cam06 | 06 Timbavadi gate-Junagadh | 0.96 | 0.60 | 373 |
+| 6J03F10419 | cam06 | 06 Timbavadi gate-Junagadh | 0.62 | 0.41 | 368 |
+| GJ08NG3852 | cam22 | 28 BK Mervada tran Rasta | 0.87 | 0.58 | 255 |
+| DL4CA04678 | cam22 | 28 BK Mervada tran Rasta | 0.96 | 0.61 | 253 |
+| G117009992 | cam06 | 06 Timbavadi gate-Junagadh | 0.70 | 0.46 | 355 |
+| 4EOSGJ11C09932408 | cam06 | 06 Timbavadi gate-Junagadh | 0.60 | 0.58 | 341 |
+| GJ01KJ5028 | cam22 | 28 BK Mervada tran Rasta | 1.00 | 0.62 | 230 |
+| 6J11C09932 | cam06 | 06 Timbavadi gate-Junagadh | 0.94 | 0.59 | 334 |
+| GJ02DE7397 | cam22 | 28 BK Mervada tran Rasta | 1.00 | 0.65 | 197 |
 | RJ20CF2562 | cam22 | 28 BK Mervada tran Rasta | 1.00 | 0.61 | 158 |
 | 083 | cam06 | 06 Timbavadi gate-Junagadh | 0.89 | 0.60 | 271 |
 | GJA1157 | cam12 | 12 Tri Mandir Adalaj Tollnaka | 0.94 | 0.62 | 34629532 |

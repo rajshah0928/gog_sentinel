@@ -67,16 +67,19 @@ timestamp.
 
 **Does not yet prove:** a true multi-camera trace (the same plate detected on 2+
 *different* cameras). Systematic testing of all 30 sandbox cameras (see
-`docs/HLD.md` §5) confirmed `cam12` (the Adalaj toll plaza) as reliably ANPR-viable;
-most of the rest are wide-angle overhead traffic-junction, RLVD, or general
-surveillance cameras at a distance/angle that does not reliably resolve plates,
-regardless of OCR engine. Two more cameras show partial promise: `cam06` (a
-gate/bypass camera already producing partial plate fragments) and `cam22` (where a
-single corrupted frame nonetheless showed a fully legible plate, `GJ08FA5001`,
-confirming the angle is viable even though sparse traffic has so far prevented a
-second clean detection there). This is an honest limitation of this specific
-sandbox's camera mix and traffic timing, not of the trace logic itself — we are
-running the pipeline against all three cameras (`cam12`, `cam06`, `cam22`)
-simultaneously in the background, in case real traffic produces a genuine
-cross-camera match before submission; if it does, this document will be updated with
-that result.
+`docs/HLD.md` §5) confirmed three as reliably ANPR-viable — `cam12` (Adalaj toll
+plaza), `cam06` (Timbavadi gate, Junagadh — now producing full plausible plates like
+`GJ2832AGOC` at 0.95 confidence, not just fragments), and `cam22` (a bypass road
+where a corrupted frame nonetheless showed a fully legible plate, `GJ08FA5001`).
+Most of the remaining cameras are wide-angle overhead traffic-junction, RLVD, or
+general surveillance cameras at a distance/angle that does not reliably resolve
+plates, regardless of OCR engine.
+
+As of this writing, a comprehensive check across 139 real detections from all three
+running cameras — both exact plate-string matches and confusion-variant matches
+(0/O, 1/I, 5/S, 8/B, 2/Z) — found **no plate yet seen on more than one camera**. This
+is an honest limitation of traffic timing and the specific cameras' geographic
+spread on this sandbox, not of the trace logic itself, which is verified correct and
+camera-agnostic (see above). The pipeline continues running against all three
+cameras simultaneously; if a genuine cross-camera match lands before submission,
+this document will be updated with that result.
