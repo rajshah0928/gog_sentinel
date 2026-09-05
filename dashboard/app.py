@@ -74,11 +74,24 @@ def inject_css():
         .stApp { background: var(--bg-0); }
         section[data-testid="stSidebar"] { background: var(--bg-1); }
 
+        /* Kill Streamlit's default top padding on the main block so our
+           header sits flush at the top instead of leaving a dead gap
+           above it. */
+        div.block-container { padding-top: 1.2rem; }
+
+        /* The header (st.markdown) and the tab bar (st.tabs) each render
+           inside their own Streamlit element-container div, which carries
+           its own default vertical gap - those two gaps stack between the
+           title block and the nav row, which is the dead space this fix
+           targets. Collapsing it only for the element-container that
+           holds .sentinel-header (scoped via :has(), not applied
+           globally) keeps every other tab's internal spacing untouched. */
+        div[data-testid="stElementContainer"]:has(.sentinel-header) { margin-bottom: 0 !important; }
+
         /* Header */
         .sentinel-header {
             display: flex; align-items: baseline; gap: 14px;
-            padding: 4px 0 18px 0; border-bottom: 1px solid var(--border);
-            margin-bottom: 22px;
+            padding: 4px 0 10px 0;
         }
         .sentinel-header .logo { font-size: 22px; font-weight: 700; color: var(--text-hi); letter-spacing: 0.2px; }
         .sentinel-header .logo b { color: var(--accent); }
@@ -90,13 +103,31 @@ def inject_css():
         }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-        /* Tabs */
-        .stTabs [data-baseweb="tab-list"] { gap: 4px; border-bottom: 1px solid var(--border); }
+        /* Nav bar - the tab list reads as one integrated bar directly
+           under the header, not a plain row of text links floating in
+           whitespace: a contained strip with its own background, a
+           bottom rule to separate it from page content, and consistent
+           padding per tab so each one reads as a nav item. */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 5px;
+            margin-top: 0;
+        }
         .stTabs [data-baseweb="tab"] {
             font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500;
-            color: var(--text-mid); padding: 10px 18px;
+            color: var(--text-mid); padding: 9px 18px; border-radius: 7px;
+            transition: background 0.15s, color 0.15s;
         }
-        .stTabs [aria-selected="true"] { color: var(--accent) !important; }
+        .stTabs [data-baseweb="tab"]:hover { background: var(--bg-2); color: var(--text-hi); }
+        .stTabs [aria-selected="true"] {
+            color: var(--text-hi) !important; background: var(--bg-2);
+        }
+        .stTabs [data-baseweb="tab-highlight"] { background-color: var(--accent) !important; height: 2.5px; }
+        .stTabs [data-baseweb="tab-border"] { display: none; }
+        .stTabs { margin-bottom: 4px; }
 
         /* Cards */
         .sentinel-card {
