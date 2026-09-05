@@ -20,6 +20,8 @@ from pptx.oxml.ns import qn
 DOCS_DIR = Path(__file__).resolve().parent
 EVIDENCE_DIR = DOCS_DIR / "evidence"
 OUT_PATH = DOCS_DIR / "Sentinel_Solution_Presentation.pptx"
+LOGO_PATH = EVIDENCE_DIR / "ruvision_logo_small.png"
+COMPANY_NAME = "RuVision Thinking Labs"
 
 # --- palette (matches the dashboard's dark theme for visual consistency) ---
 BG = RGBColor(0x0A, 0x0E, 0x14)
@@ -42,7 +44,7 @@ prs.slide_height = SLIDE_H
 BLANK = prs.slide_layouts[6]
 
 
-def add_slide():
+def add_slide(logo=True):
     slide = prs.slides.add_slide(BLANK)
     bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, SLIDE_W, SLIDE_H)
     bg.fill.solid()
@@ -53,7 +55,24 @@ def add_slide():
     spTree = slide.shapes._spTree
     spTree.remove(bg._element)
     spTree.insert(2, bg._element)
+    if logo and LOGO_PATH.exists():
+        add_logo(slide)
     return slide
+
+
+def add_logo(slide, height=Inches(0.4)):
+    """
+    Top-right RuVision brand mark, present on every slide - placement
+    matches the company's existing deck convention (logo pinned top-right,
+    ~0.2in from the top edge, ~0.4in tall).
+    """
+    from PIL import Image
+    im = Image.open(LOGO_PATH)
+    ratio = im.width / im.height
+    width = Emu(int(height * ratio))
+    left = SLIDE_W - width - Inches(0.3)
+    top = Inches(0.2)
+    slide.shapes.add_picture(str(LOGO_PATH), left, top, width=width, height=height)
 
 
 def add_text(slide, left, top, width, height, text, size=18, color=TEXT_HI,
@@ -151,6 +170,8 @@ add_text(s, Inches(0), Inches(3.75), SLIDE_W, Inches(0.6),
           "Unified Viewing & Metadata Analytics", size=24, color=ACCENT, align=PP_ALIGN.CENTER)
 add_text(s, Inches(0), Inches(4.35), SLIDE_W, Inches(0.5),
           "Gujarat Police Innovation Challenge 2026  ·  Model 2", size=16, color=TEXT_MID, align=PP_ALIGN.CENTER, font="Consolas")
+add_text(s, Inches(0), Inches(5.1), SLIDE_W, Inches(0.4),
+          f"Built by {COMPANY_NAME}", size=14, color=TEXT_LO, align=PP_ALIGN.CENTER, font="Consolas")
 dot = s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(6.55), Inches(2.35), Inches(0.16), Inches(0.16))
 dot.fill.solid(); dot.fill.fore_color.rgb = GREEN; dot.line.fill.background(); dot.shadow.inherit = False
 
