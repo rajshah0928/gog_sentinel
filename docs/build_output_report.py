@@ -39,13 +39,19 @@ PDF_PATH = EVIDENCE_DIR / "Output_Report.pdf"
 # complete record of every real detection event.
 KNOWN_OVERLAY_TEXT_PLATES = {"18062026175554MADHURAMBYPASSROADFIX2FROMAK"}
 
-# Trace evidence: no genuine cross-camera sighting of the same plate has
-# landed yet (checked via exact + confusion-variant matching across every
-# plausible-length plate in the DB - see docs/evidence/trace_demonstration.md
-# for the full methodology). This one vehicle's repeat sighting on a single
-# camera is the strongest trace evidence available and is cited in the
-# summary block below.
+# Confirmed, unambiguous trace evidence: one vehicle's repeat sighting on
+# a single camera, correctly linked across OCR-confusion-variant readings
+# (see docs/evidence/trace_demonstration.md for the full methodology).
 TRACE_EVIDENCE_PLATE = "BV2807"
+
+# Cross-camera candidate (2026-09-11 check): found via the same exact +
+# confusion-variant matching, filtered to plausible-length plates (>=5
+# chars) to exclude single-character noise coincidences. Two independent
+# detections, ~26 hours apart, geographically plausible (Junagadh <->
+# Ahmedabad-area, reachable by road in that window) - a strong OCR-level
+# match, not a database-verified same-vehicle confirmation, so it is
+# reported as candidate evidence rather than certainty throughout.
+CROSS_CAMERA_CANDIDATE_PLATES = {"GJ18ZT1282", "GJ182T1282"}
 
 init_db()
 
@@ -73,9 +79,13 @@ def is_plausible_plate(plate: str) -> bool:
 
 
 def main():
-    dets = recent_detections(limit=5000)
+    # A fixed cap silently truncated the report once the DB grew past it
+    # (21,698 real detections accumulated over the sandbox run vs. the old
+    # 5000-row limit) - the report is supposed to be a complete record, so
+    # this pulls everything rather than guessing at a "big enough" number.
+    dets = recent_detections(limit=1_000_000)
     dets = sorted(dets, key=lambda d: d["wall_clock_s"])
-    alerts = recent_alerts(limit=500)
+    alerts = recent_alerts(limit=10_000)
     alert_detection_ids = {a["detection_id"] for a in alerts}
 
     generated_at = datetime.now(timezone.utc)
@@ -85,6 +95,10 @@ def main():
     overlay_text_count = sum(1 for d in dets if d["plate"] in KNOWN_OVERLAY_TEXT_PLATES)
     trace_stops = search_plate(TRACE_EVIDENCE_PLATE)
     trace_cameras = sorted({s.camera_id for s in trace_stops})
+    cross_cam_rows = sorted(
+        (d for d in dets if d["plate"] in CROSS_CAMERA_CANDIDATE_PLATES),
+        key=lambda d: d["wall_clock_s"],
+    )
 
     # --- CSV -----------------------------------------------------------------
     with open(CSV_PATH, "w", newline="") as f:
@@ -127,13 +141,23 @@ def main():
         f.write(f"- **Cameras onboarded:** {', '.join(cameras)}\n")
         f.write(f"- **Watchlist alerts generated:** {len(alerts)}\n")
         f.write(
-            f"- **Cross-camera trace evidence:** no plate has yet been confirmed on two "
-            f"different cameras (checked exact + OCR-confusion-variant matching across "
-            f"all plausible-length plates). Strongest trace evidence to date: plate "
-            f"`{TRACE_EVIDENCE_PLATE}` detected {len(trace_stops)} times on camera(s) "
-            f"{', '.join(trace_cameras)}, correctly linked across OCR-confusion variants "
+            f"- **Confirmed single-camera trace:** plate `{TRACE_EVIDENCE_PLATE}` "
+            f"detected {len(trace_stops)} times on camera(s) {', '.join(trace_cameras)}, "
+            f"correctly linked across OCR-confusion variants "
             f"(see `trace_demonstration.md` for full detail)\n"
         )
+        if cross_cam_rows:
+            cross_cam_summary = "; ".join(
+                f"`{d['plate']}` on {d['camera_id']} at {iso(d['wall_clock_s'])} "
+                f"(OCR conf {d['ocr_confidence']:.0%})"
+                for d in cross_cam_rows
+            )
+            f.write(
+                f"- **Cross-camera candidate:** {cross_cam_summary} — a strong "
+                "OCR-level match via exact + confusion-variant matching (checked across "
+                "all plausible-length plates), not a database-verified same-vehicle "
+                "confirmation; reported as candidate evidence, not certainty\n"
+            )
         if overlay_text_count:
             f.write(
                 f"- **Known false positive:** {overlay_text_count} detection(s) flagged "
@@ -157,8 +181,30 @@ def main():
     # --- PDF (styled HTML, rendered via headless Chromium) ---------------------
     import html as html_lib
 
+    # Chromium's print-to-PDF fails outright on a table this large (21,698
+    # real rows) rather than just being slow - confirmed by hitting
+    # "Printing failed" from Page.printToPDF on the full dataset. The CSV
+    # and Markdown outputs above already contain every row without any
+    # cap, so they remain the complete, authoritative record; the PDF
+    # samples down to a size Chromium can actually render, always keeping
+    # every alert and every cross-camera-candidate row (the evidence that
+    # actually matters for review) rather than truncating them away by
+    # chance the way a plain "most recent N" cut could.
+    PDF_ROW_CAP = 2000
+    must_keep = [
+        d for d in dets
+        if d["id"] in alert_detection_ids or d["plate"] in CROSS_CAMERA_CANDIDATE_PLATES
+    ]
+    must_keep_ids = {d["id"] for d in must_keep}
+    remainder = [d for d in dets if d["id"] not in must_keep_ids]
+    sampled_dets = sorted(
+        must_keep + remainder[-(PDF_ROW_CAP - len(must_keep)):],
+        key=lambda d: d["wall_clock_s"],
+    )
+    pdf_is_sampled = len(sampled_dets) < len(dets)
+
     rows_html = []
-    for d in dets:
+    for d in sampled_dets:
         is_alert = d["id"] in alert_detection_ids
         is_overlay_fp = d["plate"] in KNOWN_OVERLAY_TEXT_PLATES
         row_style = ' style="background:#fff7e6;"' if is_alert else (
@@ -184,6 +230,30 @@ def main():
             "detection(s) below are the video overlay's own burned-in timestamp/caption "
             "text, not a vehicle plate — kept in the table rather than deleted, so this "
             "remains a complete record of every real detection event (highlighted in red).</div>"
+        )
+
+    cross_cam_note_html = ""
+    if cross_cam_rows:
+        cross_cam_items = "".join(
+            f"<li><b>{html_lib.escape(d['plate'])}</b> on {html_lib.escape(d['camera_id'])} "
+            f"at {iso(d['wall_clock_s'])} (OCR conf {d['ocr_confidence']:.0%})</li>"
+            for d in cross_cam_rows
+        )
+        cross_cam_note_html = (
+            '<div class="summary-row"><b>Cross-camera candidate:</b> a strong OCR-level '
+            "match via exact + confusion-variant matching (checked across all "
+            "plausible-length plates), not a database-verified same-vehicle confirmation "
+            f"— reported as candidate evidence, not certainty.<ul>{cross_cam_items}</ul></div>"
+        )
+
+    sample_note_html = ""
+    if pdf_is_sampled:
+        sample_note_html = (
+            f'<div class="summary-row"><b>Table below is a sample:</b> {len(sampled_dets)} of '
+            f'{len(dets)} total detections are shown (every watchlist alert and every '
+            'cross-camera-candidate row is always included; the rest is a recent-activity '
+            'sample). The complete, unsampled record of all detections is in '
+            '<code>output_report.csv</code> and <code>output_report.md</code>.</div>'
         )
 
     html = f"""<!doctype html><html><head><meta charset="utf-8">
@@ -214,13 +284,13 @@ def main():
         <div class="stat"><div class="n">{len(alerts)}</div><div class="l">Watchlist Alerts</div></div>
         <div class="stat"><div class="n">{len(cameras)}</div><div class="l">Cameras Onboarded</div></div>
     </div>
-    <div class="summary-row"><b>Cross-camera trace evidence:</b> no plate has yet been
-    confirmed on two different cameras (checked exact + OCR-confusion-variant matching
-    across all plausible-length plates). Strongest trace evidence to date: plate
+    <div class="summary-row"><b>Confirmed single-camera trace:</b> plate
     <b>{html_lib.escape(TRACE_EVIDENCE_PLATE)}</b> detected {len(trace_stops)} times on
     camera(s) {trace_cameras_html}, correctly linked across OCR-confusion variants (see
     trace_demonstration.md for full detail).</div>
+    {cross_cam_note_html}
     {overlay_note_html}
+    {sample_note_html}
 
     <h2>Detections</h2>
     <table>

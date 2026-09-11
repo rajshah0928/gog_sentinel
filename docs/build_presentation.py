@@ -323,20 +323,21 @@ s = add_slide()
 add_header(s, "The Evaluation's Core Test", "Vehicle Route Reconstruction")
 add_bullets(s, Inches(0.6), Inches(1.55), Inches(5.6), Inches(2.3), [
     "Given a plate, returns every (camera, location, timestamp) detection in chronological order.",
-    "Verified: one real vehicle detected 4 times within 16 seconds, correctly linked across OCR readings of BV2807 and 8V2807 — the confusion-variant matching fix, found via this exact data.",
-], size=15, space_after=14)
+    "Cross-camera candidate found: plate GJ18ZT1282 detected on cam06 (Timbavadi gate, Junagadh) and cam22 (BK Mervada tran Rasta) ~26 hours apart, OCR confidence 0.95 and 0.87 — linked via the same Z/2 confusion-variant matching already used for the single-camera case below.",
+], size=14.5, space_after=14)
 
 img_path = EVIDENCE_DIR / "trace.png"
 if img_path.exists():
     add_image_framed(s, img_path, Inches(6.55), Inches(1.55), Inches(6.15),
                       caption="Real search result — visual timeline with plate crop.")
 
-card = add_card(s, Inches(0.6), Inches(4.1), Inches(5.6), Inches(2.5), fill=RGBColor(0x1a,0x14,0x08), line_color=AMBER)
-add_text(s, Inches(0.85), Inches(4.3), Inches(5.1), Inches(0.35), "HONEST STATUS", size=12, color=AMBER, bold=True, font="Consolas")
-add_bullets(s, Inches(0.85), Inches(4.7), Inches(5.1), Inches(1.8), [
-    "Three cameras independently confirmed ANPR-viable, ran simultaneously for hours, 480+ real detections.",
-    "Comprehensive exact + confusion-variant check: no same-plate sighting across two different cameras yet — real traffic timing and this sandbox's camera mix, not a code limitation.",
-], size=13, space_after=8, color=TEXT_MID)
+card = add_card(s, Inches(0.6), Inches(3.85), Inches(5.6), Inches(2.9), fill=RGBColor(0x1a,0x14,0x08), line_color=AMBER)
+add_text(s, Inches(0.85), Inches(4.02), Inches(5.1), Inches(0.35), "HONEST STATUS", size=12, color=AMBER, bold=True, font="Consolas")
+add_bullets(s, Inches(0.85), Inches(4.4), Inches(5.1), Inches(2.25), [
+    "Three cameras independently confirmed ANPR-viable, ran for days, 21,000+ real detections.",
+    "One cross-camera candidate found via exact + confusion-variant matching (GJ18ZT1282 / GJ182T1282, cam06 <-> cam22): a strong OCR-level match, not database-verified as the same physical vehicle — reported as candidate evidence, not certainty.",
+    "The confirmed, unambiguous trace remains the single-camera case: one vehicle detected 4 times within 16 seconds on cam12, correctly linked across BV2807 / 8V2807 OCR readings.",
+], size=11, space_after=6, color=TEXT_MID)
 add_footer(s, 9)
 
 # ============================================================ Slide 10: Dashboard
