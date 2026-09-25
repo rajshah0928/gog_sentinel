@@ -31,7 +31,7 @@ from registry.db import (
     get_cached_geocode, cache_geocode, DEFAULT_STORAGE_NOTE,
 )
 from registry.sync import sync_registry_from_catalogue
-from registry.inference import infer_department, infer_camera_type, geocode_location
+from registry.inference import infer_department, infer_camera_type, geocode_location, is_anpr_viable_type
 from registry.gap_analysis import compute_gap_analysis
 from registry.bulk_import import import_cameras_csv
 from registry.map_helpers import build_registry_scatter_layer, build_route_layers, make_deck
@@ -44,7 +44,7 @@ init_registry_db()
 
 # Re-runs the whole script on a timer so alerts/detections appear without
 # the user having to manually refresh the page or click anything.
-st_autorefresh(interval=5000, key="live_refresh")
+st_autorefresh(interval=15000, key="live_refresh")
 
 if "registry_synced" not in st.session_state:
     # Sync once per browser session, not on every 5s autorefresh — the
@@ -55,6 +55,14 @@ if "registry_synced" not in st.session_state:
     except Exception:
         pass
     st.session_state["registry_synced"] = True
+
+
+if "failed_geocodes" not in st.session_state:
+    # Locations that failed to geocode are retried at most once per browser
+    # session, not on every 5s autorefresh — a live Nominatim lookup (with
+    # its own retry/timeout chain) on every rerun for the same known-bad
+    # name was adding several seconds to every tick.
+    st.session_state["failed_geocodes"] = set()
 
 
 def _registry_points_with_coords() -> list[dict]:
@@ -69,9 +77,12 @@ def _registry_points_with_coords() -> list[dict]:
         cached = get_cached_geocode(r["display_name"])
         if cached:
             lat, lon = cached["lat"], cached["lon"]
+        elif r["display_name"] in st.session_state["failed_geocodes"]:
+            continue
         else:
             coord = geocode_location(r["display_name"])
             if not coord:
+                st.session_state["failed_geocodes"].add(r["display_name"])
                 continue
             lat, lon = coord
             cache_geocode(r["display_name"], lat, lon, is_approximate=True)
@@ -394,11 +405,13 @@ with tab_search:
                     reg = registry_by_id.get(s.camera_id)
                     loc_name = reg["display_name"] if reg else s.location
                     cached = get_cached_geocode(loc_name)
-                    if not cached:
+                    if not cached and loc_name not in st.session_state["failed_geocodes"]:
                         coord = geocode_location(loc_name)
                         if coord:
                             cache_geocode(loc_name, coord[0], coord[1], is_approximate=True)
                             cached = {"lat": coord[0], "lon": coord[1]}
+                        else:
+                            st.session_state["failed_geocodes"].add(loc_name)
                     if not cached:
                         missing_coords.append(s.camera_id)
                         continue
@@ -432,7 +445,9 @@ with tab_search:
 
 with tab_feed:
     st.caption("Live-updating stream of the most recent detections across all active cameras — watch the AI working in real time.")
-    recent = recent_detections(limit=12)
+    viable_camera_ids = {r["camera_id"] for r in list_registry() if is_anpr_viable_type(r["camera_type"])}
+    recent_pool = recent_detections(limit=200)
+    recent = [d for d in recent_pool if d["camera_id"] in viable_camera_ids][:12]
     if recent:
         for d in recent:
             crop = _image_path(d["crop_path"])
