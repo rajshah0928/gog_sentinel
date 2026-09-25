@@ -20,6 +20,8 @@ from capture.capture_manager import CaptureManager
 from analytics.anpr_pipeline import AnprPipeline
 from watchlist.db import init_db
 from config.settings import LOG_LEVEL
+from registry.sync import sync_registry_from_catalogue
+from registry.db import update_connectivity
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -43,6 +45,12 @@ def main():
     if not cams:
         logger.error("Camera catalogue is empty. Check SENTINEL_HOST and gateway connectivity.")
         sys.exit(1)
+
+    try:
+        n_synced = sync_registry_from_catalogue(prefer_cache=True)
+        logger.info("Registry synced: %d cameras", n_synced)
+    except Exception:
+        logger.exception("Registry sync failed (non-fatal, capture continues)")
 
     if args.all:
         camera_ids = [c.camera_id for c in cams if c.live]
@@ -83,6 +91,13 @@ def main():
                     cs["camera_id"], cs["connected"], cs["frames_received"], cs["reconnect_count"],
                     a.get("reads_count", 0), a.get("detections_count", 0),
                 )
+                try:
+                    update_connectivity(
+                        cs["camera_id"], cs["connected"],
+                        last_seen=time.time() if cs["connected"] else None,
+                    )
+                except Exception:
+                    logger.exception("Registry connectivity update failed for %s (non-fatal)", cs["camera_id"])
 
     pipeline.stop_all()
     manager.close_all()

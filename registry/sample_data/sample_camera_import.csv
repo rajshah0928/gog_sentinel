@@ -1,0 +1,3 @@
+camera_id,display_name,department,camera_type,storage_details
+cam31,31 Sample Additional Junction Camera,Police,junction,Owned and retained by the respective department's own VMS/gateway
+cam32,32 Sample RTO Checkpost,Transport,toll,Owned and retained by the respective department's own VMS/gateway

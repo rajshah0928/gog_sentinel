@@ -3,10 +3,14 @@
 
 ## 1. Overview and model choice
 
-We implement **Model 2** exactly as specified: a unified viewing platform that connects
-directly to each camera/VMS system via RTSP, without introducing a middleware or
-federation layer. Departmental VMS/storage systems are untouched — we consume live
-streams only, we never push to or control the gateway.
+We implement **Model 1 (mandatory foundation) + Model 2 (primary/chosen integration
+model)**. The portal specifies Model 1 (Registry & GIS Foundation) as a mandatory
+foundation layer under every submission regardless of which primary model is built on
+top of it — section 2 below covers that foundation. Our primary/chosen model is
+**Model 2**: a unified viewing platform that connects directly to each camera/VMS
+system via RTSP, without introducing a middleware or federation layer. Departmental
+VMS/storage systems are untouched — we consume live streams only, we never push to or
+control the gateway.
 
 **Why Model 2, not 3/4:** given the challenge's real timeline and the diversity of 26
 departments' existing VMS/storage (some cloud, some local; 7–15+ day retention;
@@ -15,11 +19,69 @@ multi-department integration program — appropriate for a phased statewide roll
 a hackathon prototype. Model 2 delivers the two things the evaluation actually tests —
 unified live viewing and AI-powered cross-camera vehicle tracing — without requiring
 any department to change how it stores or manages its own footage. It is also the
-lowest-risk entry point for the eventual statewide expansion described in section 7:
+lowest-risk entry point for the eventual statewide expansion described in section 8:
 departments can be onboarded into central viewing/analytics one at a time, on existing
 infrastructure, before any heavier federation investment is made.
 
-## 2. Architecture
+## 2. Model 1: Registry & GIS Foundation
+
+Built as a minimal, additive layer underneath the Model 2 platform described in the
+rest of this document — it does not change or depend on changes to the capture,
+analytics, watchlist, or route-reconstruction logic, only adds a registry/map view on
+top of data those components already produce.
+
+**Camera registry.** A registry table (in the same SQLite store as the existing
+watchlist/detections/alerts data) is auto-synced from the live camera catalogue on
+pipeline startup and on dashboard load — all 30 sandbox cameras are populated with zero
+manual entry. Each row carries a display name/location, department, camera_type,
+connectivity status (reusing the same connected/disconnected state the capture layer
+already tracks), last-seen timestamp, and a storage-details note. Department and
+camera_type are **inferred from location-name patterns** (e.g. "Tollnaka" → toll →
+Transport department; "gate" → gate → Police; "bypass" → bypass → Police) — this reuses
+the exact naming-convention signal already validated in section 6's plate-legibility
+findings, where camera angle/installation type (not raw camera count) turned out to
+determine ANPR viability. **This inference is illustrative, not real department-supplied
+classification data** — it is stated as such everywhere it appears (dashboard, this
+document), never presented as verified ownership or asset data.
+
+**Onboarding paths beyond the live catalogue.** Two additional onboarding paths are
+implemented and demonstrated for cameras not already in the live gateway catalogue: a
+CSV bulk-import function (tested end-to-end against a sample file, `registry/
+sample_data/sample_camera_import.csv`) and a manual single-camera entry form on the
+dashboard's Registry tab. Both write into the same registry table as the auto-synced
+catalogue rows.
+
+**GIS map.** Cameras are geocoded from their location name via Nominatim (OpenStreetMap),
+with every result checked against a Gujarat bounding box before being accepted — a
+result outside the box is rejected rather than plotted. This check caught a concrete bad
+match during development: the location name "kheram" resolved to a same-named place in
+Kashmir, which the bounding-box check correctly rejected. Stated plainly rather than
+rounded up: **23 of the 30 cameras geocoded successfully; 7 failed** on location names
+too ambiguous or installation-descriptor-heavy to resolve to a specific point (e.g.
+"Chiman bhai Bridge", "Mohanpura") even after stripping installation-type words and
+retrying. Those 7 are **omitted from the map** rather than shown with a guessed or
+incorrect position — they remain fully visible in the registry table. Markers on the map
+are color-coded by connectivity status or camera type; clicking one shows its registry
+metadata (location, department, type, status, last seen).
+
+**Gap analysis.** Surfaced in the same Registry tab: count of currently disconnected
+cameras, count of cameras with no plate detection in a configurable recent window
+(default 6h), and a breakdown of registered cameras by camera_type showing which
+categories are ANPR-viable (toll/gate/bypass — close-range, vehicle-facing) versus
+situational-only (wide-angle junction cameras, without a closer secondary camera). This
+is the same camera-angle finding from section 6's plate-legibility work, now surfaced as
+an operational planning/coverage view rather than only a debugging note.
+
+**Production note.** In a real departmental deployment, department ownership,
+camera_type, and coordinates would be **department-supplied at onboarding** rather than
+inferred from location-name patterns or geocoded after the fact — the inference and
+geocoding built here are a hackathon-scale substitute for data this platform does not
+currently receive from any department, not the intended production source of truth. The
+registry schema and onboarding paths (catalogue sync, CSV import, manual entry) are
+designed to accept that department-supplied data directly once available, without a
+schema change.
+
+## 3. Architecture
 
 ```
 Departmental CCTV / VMS (RTSP, ONVIF, vendor APIs)
@@ -53,13 +115,20 @@ Unified Control-Room View  (dashboard/)
     route view, watchlist administration — auto-refreshing, no manual reload
 ```
 
+The Search/Trace view now offers a map alongside its existing chronological list: the same
+`route_reconstruction.py` output, unmodified, rendered as a path across camera locations
+using the Model 1 registry's coordinates (section 2) — a new visualization layer on top of
+existing trace data, not a change to how a route is computed. A plate seen on only one
+camera is shown as a single point rather than a degenerate line; the list view remains
+available unchanged alongside it.
+
 No frame is ever written to persistent storage as a side effect of this pipeline —
 only structured metadata (plate text, camera, timestamp, confidence) is retained. This
 keeps storage/bandwidth costs low and sidesteps most video-retention/privacy concerns;
 full video remains wherever the owning department already keeps it, for whatever
 retention period they already use.
 
-## 3. Live stream ingestion
+## 4. Live stream ingestion
 
 - Every capture explicitly forces RTSP over TCP. UDP is accepted by many gateways but
   produces silently corrupted frames across NAT/firewalls, which manifests as
@@ -85,7 +154,7 @@ retention period they already use.
   connection footprint on each department's gateway proportional to actual demand
   rather than the full camera count.
 
-## 4. Watchlist integration and alerting workflow
+## 5. Watchlist integration and alerting workflow
 
 The watchlist is a simple, swappable schema: plate number, reason/category, date
 added. For this prototype we populate our own representative watchlist (explicitly
@@ -110,7 +179,7 @@ category — stolen/wanted/suspect/missing) and role-based routing to the approp
 desk are natural next steps once integrated with a real command-center notification
 channel (see section 7).
 
-## 5. AI/analytics approach
+## 6. AI/analytics approach
 
 **ANPR is the mandatory analytic and the only one implemented in this prototype**,
 deliberately — face recognition and other analytics are explicitly out of scope given
@@ -215,7 +284,7 @@ platform's unified viewer works identically over both camera types, and the ANPR
 pipeline automatically benefits wherever close-range coverage already exists, exactly
 as demonstrated here.
 
-## 6. Alert notification workflow
+## 7. Alert notification workflow
 
 Current prototype: alerts land in the SQLite alert log and the dashboard's live feed
 in real time (sub-second from detection to visible alert). For an operational
@@ -225,7 +294,7 @@ point for:
 - SMS/email escalation for high-priority categories (stolen, wanted),
 - an audit trail of who viewed/actioned each alert (role-based access, see below).
 
-## 7. Scalability, interoperability, security, performance — path to ~80,000 cameras
+## 8. Scalability, interoperability, security, performance — path to ~80,000 cameras
 
 **Scalability.** The capture layer already treats "which cameras are open" as a
 runtime-configurable set pulled from a live directory, not a static list — the
@@ -288,7 +357,7 @@ single-machine camera count.
   practice at production scale (this prototype's SQLite is a pilot-scale choice;
   swapping to PostgreSQL is a schema-compatible change, not a redesign).
 
-## 8. What we need from participating departments
+## 9. What we need from participating departments
 
 - A reachable RTSP (or ONVIF/vendor-SDK) endpoint per camera intended for onboarding,
   and confirmation of codec/resolution/frame-rate characteristics per camera or camera

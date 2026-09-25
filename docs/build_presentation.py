@@ -188,23 +188,61 @@ add_footer(s, 2)
 
 # ============================================================ Slide 3: Model choice
 s = add_slide()
-add_header(s, "Solution Model", "Model 2 — Unified Viewing & Metadata Analytics")
-add_bullets(s, Inches(0.6), Inches(1.6), Inches(7.0), Inches(4.8), [
+add_text(s, Inches(0.6), Inches(0.35), Inches(8), Inches(0.35),
+          "SOLUTION MODEL", size=12, color=ACCENT, bold=True, font="Consolas")
+add_text(s, Inches(0.6), Inches(0.65), Inches(12.1), Inches(0.95),
+          "Model 1 (Foundation) + Model 2 (Primary) — Registry & GIS Foundation with Unified Viewing & Metadata Analytics",
+          size=22, color=TEXT_HI, bold=True)
+line3 = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.6), Inches(1.62), Inches(12.1), Pt(1.5))
+line3.fill.solid(); line3.fill.fore_color.rgb = BORDER
+line3.line.fill.background(); line3.shadow.inherit = False
+add_bullets(s, Inches(0.6), Inches(1.85), Inches(7.0), Inches(4.8), [
     "Direct RTSP / ONVIF / vendor-API connection to each camera or VMS.",
     "No middleware or federation layer introduced.",
     "Departmental VMS and storage systems remain completely untouched and continue operating independently.",
 ], size=17, space_after=16)
 
-card = add_card(s, Inches(8.0), Inches(1.6), Inches(4.7), Inches(4.8))
-add_text(s, Inches(8.3), Inches(1.85), Inches(4.1), Inches(0.4), "WHY MODEL 2, NOT 3/4", size=13, color=ACCENT, bold=True, font="Consolas")
-add_bullets(s, Inches(8.3), Inches(2.35), Inches(4.15), Inches(3.9), [
+card = add_card(s, Inches(8.0), Inches(1.75), Inches(4.7), Inches(4.8))
+add_text(s, Inches(8.3), Inches(2.0), Inches(4.1), Inches(0.4), "WHY MODEL 2, NOT 3/4", size=13, color=ACCENT, bold=True, font="Consolas")
+add_bullets(s, Inches(8.3), Inches(2.5), Inches(4.15), Inches(3.9), [
     "26 departments' VMS/storage diversity makes a federation layer a multi-department program — not a hackathon-timeline build.",
     "Delivers exactly the two capabilities the evaluation tests: live unified view + AI vehicle tracing.",
     "Lowest integration risk: zero dependency on any department changing its systems.",
-], size=14, space_after=12)
+    "Model 1 (Registry & GIS Foundation) is built underneath as the mandatory foundation every submission requires.",
+], size=14, space_after=10)
 add_footer(s, 3)
 
-# ============================================================ Slide 4: Architecture
+# ============================================================ Slide 4: Model 1 Foundation
+s = add_slide()
+add_header(s, "Mandatory Foundation, Built Underneath", "Model 1 Foundation — Registry & GIS")
+add_bullets(s, Inches(0.6), Inches(1.6), Inches(7.1), Inches(2.6), [
+    "Camera registry auto-synced from the live catalogue — all 30 sandbox cameras, zero manual entry.",
+    "Two additional onboarding paths demonstrated: CSV bulk-import and a manual single-camera entry form.",
+    "Department and camera type are inferred from location-name patterns (toll/gate/bypass/junction) — the same signal already validated in our plate-legibility findings.",
+], size=15.5, space_after=14)
+
+card = add_card(s, Inches(0.6), Inches(4.35), Inches(7.1), Inches(2.4), fill=RGBColor(0x1a,0x14,0x08), line_color=AMBER)
+add_text(s, Inches(0.85), Inches(4.52), Inches(6.5), Inches(0.35), "HONEST STATUS", size=12, color=AMBER, bold=True, font="Consolas")
+add_bullets(s, Inches(0.85), Inches(4.9), Inches(6.6), Inches(1.8), [
+    "GIS map: 23 of 30 cameras geocoded and plotted; 7 failed on genuinely ambiguous location names and are omitted from the map, not guessed — still visible in the registry table.",
+    "Caught one bad match during development (a location name that resolved to Kashmir); rejected by a Gujarat bounding-box check before it could reach the map.",
+    "Department/camera-type mapping is illustrative, inferred from naming patterns — not department-supplied ownership data.",
+], size=12, space_after=8, color=TEXT_MID)
+
+card2 = add_card(s, Inches(8.0), Inches(1.6), Inches(4.7), Inches(3.1))
+add_text(s, Inches(8.3), Inches(1.8), Inches(4.1), Inches(0.35), "GAP ANALYSIS", size=13, color=ACCENT, bold=True, font="Consolas")
+add_bullets(s, Inches(8.3), Inches(2.3), Inches(4.15), Inches(2.3), [
+    "Disconnected-camera count and stale-detection count, both live.",
+    "ANPR-viability breakdown by camera type: toll/gate/bypass viable vs. wide junction cameras situational-only.",
+    "Surfaces the same camera-angle finding from our AI-analytics debugging story as an operational coverage view.",
+], size=13, space_after=10)
+
+add_text(s, Inches(8.0), Inches(4.9), Inches(4.7), Inches(1.8),
+          "[SCREENSHOT: Registry tab — map view]",
+          size=13, color=TEXT_LO, align=PP_ALIGN.CENTER)
+add_footer(s, 4)
+
+# ============================================================ Slide 5: Architecture
 s = add_slide()
 add_header(s, "Architecture", "End-to-End Data Flow")
 
@@ -250,9 +288,9 @@ add_bullets(s, Inches(2.3), Inches(5.3), Inches(8.8), Inches(1.2), [
     "Analytics: YOLO plate detector + PaddleOCR, CPU-only, configurable sample rate.",
     "Storage: SQLite metadata log (schema-compatible upgrade path to PostgreSQL).",
 ], size=13.5, space_after=8)
-add_footer(s, 4)
+add_footer(s, 5)
 
-# ============================================================ Slide 5: Live stream ingestion
+# ============================================================ Slide 6: Live stream ingestion
 s = add_slide()
 add_header(s, "Engineering — Proven, Not Just Designed", "Live Stream Ingestion")
 add_bullets(s, Inches(0.6), Inches(1.6), Inches(11.9), Inches(2.0), [
@@ -268,9 +306,9 @@ add_bullets(s, Inches(0.9), Inches(4.45), Inches(11.0), Inches(2.1), [
     "Confirmed automatic reconnect/recovery after a forced restart.",
     "Ran a clean, multi-camera, multi-hour unattended session: zero crashes, zero unwanted reconnects, 480+ real detections logged.",
 ], size=15, space_after=12)
-add_footer(s, 5)
+add_footer(s, 6)
 
-# ============================================================ Slide 6: AI analytics — the debugging story
+# ============================================================ Slide 7: AI analytics — the debugging story
 s = add_slide()
 add_header(s, "AI-Powered Video Analytics", "Finding — and Fixing — the Plate-Legibility Bottleneck")
 
@@ -291,18 +329,18 @@ for i, step in enumerate(steps):
     r = p.add_run(); r.text = str(i + 1); r.font.bold = True; r.font.size = Pt(14); r.font.color.rgb = RGBColor(0xFF,0xFF,0xFF)
     add_text(s, Inches(1.2), y - Inches(0.02), Inches(11.3), Inches(0.85), step, size=13.5, color=TEXT_MID, line_spacing=1.1)
     y += Inches(1.02)
-add_footer(s, 6)
+add_footer(s, 7)
 
-# ============================================================ Slide 7: Detection Feed screenshot
+# ============================================================ Slide 8: Detection Feed screenshot
 s = add_slide()
 add_header(s, "AI Analytics — Live Evidence", "Detection Feed: Watch the AI Working in Real Time")
 img_path = EVIDENCE_DIR / "detection_feed.png"
 if img_path.exists():
     add_image_framed(s, img_path, Inches(1.1), Inches(1.6), Inches(11.1),
                       caption="Real crop + real annotated frame (bounding box drawn by the detector) for two different live-detected vehicles — not staged.")
-add_footer(s, 7)
+add_footer(s, 8)
 
-# ============================================================ Slide 8: Watchlist correlation
+# ============================================================ Slide 9: Watchlist correlation
 s = add_slide()
 add_header(s, "Watchlist Correlation", "Real-Time Alerting")
 add_bullets(s, Inches(0.6), Inches(1.6), Inches(5.6), Inches(4.5), [
@@ -316,9 +354,9 @@ img_path = EVIDENCE_DIR / "alert.png"
 if img_path.exists():
     add_image_framed(s, img_path, Inches(6.55), Inches(1.6), Inches(6.15),
                       caption="Real watchlist match — 100% confidence, real plate crop, real timestamp.")
-add_footer(s, 8)
+add_footer(s, 9)
 
-# ============================================================ Slide 9: Vehicle trace
+# ============================================================ Slide 10: Vehicle trace
 s = add_slide()
 add_header(s, "The Evaluation's Core Test", "Vehicle Route Reconstruction")
 add_bullets(s, Inches(0.6), Inches(1.55), Inches(5.6), Inches(2.3), [
@@ -337,10 +375,11 @@ add_bullets(s, Inches(0.85), Inches(4.4), Inches(5.1), Inches(2.25), [
     "Three cameras independently confirmed ANPR-viable, ran for days, 21,000+ real detections.",
     "One cross-camera candidate found via exact + confusion-variant matching (GJ18ZT1282 / GJ182T1282, cam06 <-> cam22): a strong OCR-level match, not database-verified as the same physical vehicle — reported as candidate evidence, not certainty.",
     "The confirmed, unambiguous trace remains the single-camera case: one vehicle detected 4 times within 16 seconds on cam12, correctly linked across BV2807 / 8V2807 OCR readings.",
+    "A map view of the same route is now available alongside this list view, plotted using the Model 1 registry's camera coordinates.",
 ], size=11, space_after=6, color=TEXT_MID)
-add_footer(s, 9)
+add_footer(s, 10)
 
-# ============================================================ Slide 10: Dashboard
+# ============================================================ Slide 11: Dashboard
 s = add_slide()
 add_header(s, "Unified Control-Room View", "The Dashboard")
 img_path = EVIDENCE_DIR / "camera_feed.png"
@@ -351,9 +390,9 @@ img_path2 = EVIDENCE_DIR / "watchlist.png"
 if img_path2.exists():
     add_image_framed(s, img_path2, Inches(6.75), Inches(1.55), Inches(5.9),
                       caption="Watchlist administration.")
-add_footer(s, 10)
+add_footer(s, 11)
 
-# ============================================================ Slide 11: Tech stack
+# ============================================================ Slide 12: Tech stack
 s = add_slide()
 add_header(s, "Implementation", "Technology Stack")
 stack = [
@@ -372,9 +411,9 @@ for label, val in stack:
 add_text(s, Inches(0.6), y + Inches(0.1), Inches(11.9), Inches(0.5),
           "No GPU, no external message bus required at this scale — deliberately minimal-dependency for fast, reliable deployment.",
           size=14, color=TEXT_MID)
-add_footer(s, 11)
+add_footer(s, 12)
 
-# ============================================================ Slide 12: Scalability
+# ============================================================ Slide 13: Scalability
 s = add_slide()
 add_header(s, "Path to Statewide Scale", "Scalability, Security & Deployment")
 add_bullets(s, Inches(0.6), Inches(1.6), Inches(11.9), Inches(4.8), [
@@ -384,9 +423,9 @@ add_bullets(s, Inches(0.6), Inches(1.6), Inches(11.9), Inches(4.8), [
     "No department's existing VMS, storage, or retention policy is touched.",
     "RBAC, audit logging, and TLS-everywhere are the production hardening path beyond this prototype.",
 ], size=16, space_after=18)
-add_footer(s, 12)
+add_footer(s, 13)
 
-# ============================================================ Slide 13: Impact
+# ============================================================ Slide 14: Impact
 s = add_slide()
 add_header(s, "Expected Outcomes", "Operational Benefits")
 add_bullets(s, Inches(0.6), Inches(1.6), Inches(11.9), Inches(4.5), [
@@ -394,9 +433,9 @@ add_bullets(s, Inches(0.6), Inches(1.6), Inches(11.9), Inches(4.5), [
     "Automated, continuous watchlist correlation — proactive alerting instead of manual after-the-fact video review.",
     "Fast, low-risk path to statewide expansion: same architecture, more camera shards, no redesign required.",
 ], size=18, space_after=22)
-add_footer(s, 13)
+add_footer(s, 14)
 
-# ============================================================ Slide 14: Roadmap
+# ============================================================ Slide 15: Roadmap
 s = add_slide()
 add_header(s, "Honest About Current Scope", "What's Next")
 add_bullets(s, Inches(0.6), Inches(1.6), Inches(11.9), Inches(4.5), [
@@ -404,9 +443,9 @@ add_bullets(s, Inches(0.6), Inches(1.6), Inches(11.9), Inches(4.5), [
     "Live VAHAN / eGujCop integration — currently a representative demo watchlist, as explicitly permitted by the challenge rules.",
     "Edge deployment pilot for bandwidth-constrained districts.",
 ], size=17, space_after=18)
-add_footer(s, 14)
+add_footer(s, 15)
 
-# ============================================================ Slide 15: Thank you
+# ============================================================ Slide 16: Thank you
 s = add_slide()
 add_text(s, Inches(0), Inches(3.0), SLIDE_W, Inches(1.0),
           "Thank you", size=48, color=TEXT_HI, bold=True, align=PP_ALIGN.CENTER)

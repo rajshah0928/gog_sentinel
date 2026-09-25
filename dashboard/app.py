@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
+import pydeck as pdk
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
@@ -25,15 +26,66 @@ from watchlist.db import (
 )
 from vehicle_trace.route_reconstruction import search_plate
 from config.ingest_client import get_catalogue
+from registry.db import (
+    init_registry_db, list_registry, upsert_registry_entry, RegistryEntry,
+    get_cached_geocode, cache_geocode, DEFAULT_STORAGE_NOTE,
+)
+from registry.sync import sync_registry_from_catalogue
+from registry.inference import infer_department, infer_camera_type, geocode_location
+from registry.gap_analysis import compute_gap_analysis
+from registry.bulk_import import import_cameras_csv
+from registry.map_helpers import build_registry_scatter_layer, build_route_layers, make_deck
 
 EVIDENCE_DIR = Path(__file__).resolve().parent / "evidence_images"
 
 st.set_page_config(page_title="Sentinel Unified Viewer", layout="wide", page_icon="🛰️")
 init_db()
+init_registry_db()
 
 # Re-runs the whole script on a timer so alerts/detections appear without
 # the user having to manually refresh the page or click anything.
 st_autorefresh(interval=5000, key="live_refresh")
+
+if "registry_synced" not in st.session_state:
+    # Sync once per browser session, not on every 5s autorefresh — the
+    # underlying catalogue rarely changes mid-session, and re-syncing
+    # every tick would add avoidable load for no benefit.
+    try:
+        sync_registry_from_catalogue(prefer_cache=True)
+    except Exception:
+        pass
+    st.session_state["registry_synced"] = True
+
+
+def _registry_points_with_coords() -> list[dict]:
+    """
+    Joins registry rows with cached geocodes, geocoding on the fly (and
+    caching the result) for any row not yet resolved. Rows that still can't
+    be geocoded are skipped from the map (but still show up in the table/
+    gap-analysis, which don't need coordinates).
+    """
+    points = []
+    for r in list_registry():
+        cached = get_cached_geocode(r["display_name"])
+        if cached:
+            lat, lon = cached["lat"], cached["lon"]
+        else:
+            coord = geocode_location(r["display_name"])
+            if not coord:
+                continue
+            lat, lon = coord
+            cache_geocode(r["display_name"], lat, lon, is_approximate=True)
+        points.append({
+            "camera_id": r["camera_id"],
+            "display_name": r["display_name"],
+            "department": r["department"],
+            "camera_type": r["camera_type"],
+            "connectivity_status": r["connectivity_status"],
+            "last_seen": r["last_seen"],
+            "lat": lat,
+            "lon": lon,
+        })
+    return points
 
 CATEGORY_COLORS = {
     "stolen": "#ef4444",
@@ -203,8 +255,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab_alerts, tab_cameras, tab_search, tab_feed, tab_watchlist = st.tabs(
-    ["🚨 Live Alerts", "📷 Cameras", "🔍 Search / Trace", "📡 Detection Feed", "📋 Watchlist"]
+tab_alerts, tab_cameras, tab_search, tab_feed, tab_watchlist, tab_registry = st.tabs(
+    ["🚨 Live Alerts", "📷 Cameras", "🔍 Search / Trace", "📡 Detection Feed", "📋 Watchlist", "🗺️ Registry"]
 )
 
 # --- Live Alerts -------------------------------------------------------------
@@ -312,21 +364,67 @@ with tab_search:
             cams_seen = len(set(s.camera_id for s in stops))
             st.success(f"{len(stops)} detection(s) across {cams_seen} camera(s) — route reconstructed in chronological order.")
 
-            for s in stops:
-                crop = _image_path(s.crop_path)
-                st.markdown('<div class="timeline-item">', unsafe_allow_html=True)
-                cols = st.columns([1, 5])
-                with cols[0]:
-                    if crop:
-                        st.image(str(crop), width=100)
-                with cols[1]:
-                    st.markdown(
-                        f'<div class="timeline-cam">📍 {html.escape(s.location)} <span style="color:#5c6b86; font-weight:400;">({html.escape(s.camera_id)})</span></div>'
-                        f'<div class="timeline-time">{s.wall_clock_iso} &nbsp;·&nbsp; plate read: <b style="color:#e6edf5;">{html.escape(s.plate)}</b> '
-                        f'&nbsp;·&nbsp; confidence {s.ocr_confidence:.0%}</div>',
-                        unsafe_allow_html=True,
-                    )
-                st.markdown('</div>', unsafe_allow_html=True)
+            view_list, view_map = st.tabs(["List", "Map"])
+
+            with view_list:
+                for s in stops:
+                    crop = _image_path(s.crop_path)
+                    st.markdown('<div class="timeline-item">', unsafe_allow_html=True)
+                    cols = st.columns([1, 5])
+                    with cols[0]:
+                        if crop:
+                            st.image(str(crop), width=100)
+                    with cols[1]:
+                        st.markdown(
+                            f'<div class="timeline-cam">📍 {html.escape(s.location)} <span style="color:#5c6b86; font-weight:400;">({html.escape(s.camera_id)})</span></div>'
+                            f'<div class="timeline-time">{s.wall_clock_iso} &nbsp;·&nbsp; plate read: <b style="color:#e6edf5;">{html.escape(s.plate)}</b> '
+                            f'&nbsp;·&nbsp; confidence {s.ocr_confidence:.0%}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+            with view_map:
+                # Reuses vehicle_trace.route_reconstruction's existing output
+                # (stops, already chronologically ordered) — this only adds a
+                # map rendering of that same data, no new trace/matching logic.
+                registry_by_id = {r["camera_id"]: r for r in list_registry()}
+                route_points = []
+                missing_coords = []
+                for i, s in enumerate(stops, start=1):
+                    reg = registry_by_id.get(s.camera_id)
+                    loc_name = reg["display_name"] if reg else s.location
+                    cached = get_cached_geocode(loc_name)
+                    if not cached:
+                        coord = geocode_location(loc_name)
+                        if coord:
+                            cache_geocode(loc_name, coord[0], coord[1], is_approximate=True)
+                            cached = {"lat": coord[0], "lon": coord[1]}
+                    if not cached:
+                        missing_coords.append(s.camera_id)
+                        continue
+                    route_points.append({
+                        "seq": i,
+                        "camera_id": s.camera_id,
+                        "location": s.location,
+                        "wall_clock_iso": s.wall_clock_iso,
+                        "lat": cached["lat"],
+                        "lon": cached["lon"],
+                    })
+
+                if route_points:
+                    if len(route_points) == 1:
+                        st.caption("Single-camera detection only — shown as one point, no route line.")
+                    else:
+                        st.caption("Route shown in chronological order (line connects detections by time, not necessarily by road).")
+                    layers = build_route_layers(route_points)
+                    tooltip_html = "<b>{camera_id}</b><br/>{location}<br/>{wall_clock_iso}"
+                    deck = make_deck(layers, points_for_viewport=route_points, tooltip_html=tooltip_html)
+                    st.pydeck_chart(deck, height=450)
+                else:
+                    st.info("No coordinates available for this route's camera(s) yet.")
+                if missing_coords:
+                    st.caption(f"No coordinates resolved for: {', '.join(missing_coords)} — omitted from the map, still shown in the List view.")
+                st.caption("Coordinates are approximate (geocoded from location name), not department-supplied camera GPS — see Registry tab / HLD for detail.")
         else:
             st.warning("No detections found for this plate.")
 
@@ -385,3 +483,148 @@ with tab_watchlist:
             add_watchlist_entry(plate, reason, category)
             st.success(f"Added {plate.upper()} to watchlist.")
             st.rerun()
+
+# --- Registry (Model 1 foundation) --------------------------------------------
+
+with tab_registry:
+    st.caption(
+        "Model 1 (Registry & GIS Foundation) — a minimal foundation layer under our "
+        "primary Model 2 submission, per the portal's requirement that every "
+        "submission include it. Department, camera type, and map coordinates below "
+        "are **illustrative**, inferred from location-name patterns and geocoding — "
+        "not department-supplied ownership or GPS data. See the HLD for detail."
+    )
+
+    reg_rows = list_registry()
+
+    if not reg_rows:
+        st.info("Registry is empty — it populates automatically from the live camera catalogue.")
+    else:
+        # --- summary stats ---
+        gap = compute_gap_analysis()
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown(f'<div class="sentinel-stat"><div class="n">{gap.total_cameras}</div><div class="l">Registered Cameras</div></div>', unsafe_allow_html=True)
+        with c2:
+            st.markdown(f'<div class="sentinel-stat"><div class="n">{gap.disconnected_count}</div><div class="l">Disconnected</div></div>', unsafe_allow_html=True)
+        with c3:
+            st.markdown(f'<div class="sentinel-stat"><div class="n">{gap.stale_count}</div><div class="l">No Detections in {gap.stale_hours_threshold:.0f}h</div></div>', unsafe_allow_html=True)
+        with c4:
+            viable_types = sum(v["count"] for v in gap.by_type.values() if v["anpr_viable"])
+            st.markdown(f'<div class="sentinel-stat live"><div class="n">{viable_types}</div><div class="l">ANPR-Viable (by type)</div></div>', unsafe_allow_html=True)
+
+        st.write("")
+        st.subheader("Camera Map")
+        color_by = st.radio("Color markers by", ["Connectivity", "Camera type"], horizontal=True, label_visibility="collapsed")
+        map_points = _registry_points_with_coords()
+        if map_points:
+            layer = build_registry_scatter_layer(map_points, color_by="connectivity" if color_by == "Connectivity" else "type")
+            tooltip_html = (
+                "<b>{camera_id}</b> — {display_name}<br/>"
+                "Dept: {department} &nbsp; Type: {camera_type}<br/>"
+                "Status: {connectivity_status}"
+            )
+            deck = make_deck([layer], points_for_viewport=map_points, tooltip_html=tooltip_html)
+            st.pydeck_chart(deck, height=450)
+            n_missing = len(reg_rows) - len(map_points)
+            if n_missing:
+                st.caption(f"{n_missing} camera(s) omitted from the map — location name could not be geocoded.")
+        else:
+            st.info("No camera coordinates resolved yet.")
+        st.caption("Coordinates are approximate (place-name geocoding via OpenStreetMap), not department-supplied GPS.")
+
+        st.write("")
+        st.subheader("Gap Analysis")
+        gc1, gc2 = st.columns(2)
+        with gc1:
+            st.markdown("**Disconnected cameras**")
+            if gap.disconnected_ids:
+                st.write(", ".join(gap.disconnected_ids))
+            else:
+                st.caption("None currently disconnected.")
+        with gc2:
+            st.markdown(f"**No plate read in the last {gap.stale_hours_threshold:.0f}h**")
+            if gap.stale_ids:
+                st.write(", ".join(gap.stale_ids))
+            else:
+                st.caption("All cameras have recent detections.")
+
+        st.markdown("**ANPR viability by camera type**")
+        st.caption(
+            "Reuses our earlier plate-legibility finding: close-range, vehicle-facing "
+            "installations (toll/gate/bypass) are ANPR-viable; wide-angle junction/"
+            "situational cameras typically aren't, without a closer secondary camera."
+        )
+        type_df = pd.DataFrame([
+            {
+                "camera_type": t,
+                "count": v["count"],
+                "anpr_viable": "Yes" if v["anpr_viable"] else "Situational only",
+                "with_detections": v["with_detections"],
+            }
+            for t, v in gap.by_type.items()
+        ])
+        st.dataframe(type_df, use_container_width=True, hide_index=True)
+
+        st.write("")
+        st.subheader("Registry Table")
+        reg_df = pd.DataFrame([dict(r) for r in reg_rows])
+        reg_df["last_seen"] = pd.to_datetime(reg_df["last_seen"], unit="s", errors="coerce")
+        st.dataframe(
+            reg_df[["camera_id", "display_name", "department", "camera_type", "connectivity_status", "last_seen", "source"]],
+            use_container_width=True, hide_index=True,
+        )
+
+    st.write("")
+    st.subheader("Onboard a Camera")
+    onboard_manual, onboard_csv = st.tabs(["Manual Entry", "CSV Bulk Import"])
+
+    with onboard_manual:
+        with st.form("add_registry_camera"):
+            st.write("Add one camera's metadata manually")
+            m_id = st.text_input("Camera ID", placeholder="e.g. cam31")
+            m_name = st.text_input("Display name / location", placeholder="e.g. 31 Example Junction")
+            m_dept = st.text_input("Department (optional — inferred if left blank)")
+            m_type = st.selectbox("Camera type", ["", "toll", "gate", "bypass", "junction", "transport-facility", "administrative"])
+            m_submitted = st.form_submit_button("Add camera")
+            if m_submitted:
+                if not m_id.strip() or not m_name.strip():
+                    st.error("Camera ID and display name are required.")
+                else:
+                    cam_type = m_type or infer_camera_type(m_name)
+                    dept = m_dept.strip() or infer_department(m_name, cam_type)
+                    upsert_registry_entry(RegistryEntry(
+                        camera_id=m_id.strip(),
+                        display_name=m_name.strip(),
+                        department=dept,
+                        camera_type=cam_type,
+                        connectivity_status="unknown",
+                        last_seen=None,
+                        storage_details=DEFAULT_STORAGE_NOTE,
+                        source="manual",
+                    ))
+                    st.success(f"Added {m_id.strip()} to the registry.")
+                    st.rerun()
+
+    with onboard_csv:
+        st.caption(
+            "Demonstrates bulk-onboarding cameras not present in the live gateway "
+            "catalogue. Required columns: camera_id, display_name. Optional: "
+            "department, camera_type, storage_details (inferred/defaulted if omitted)."
+        )
+        sample_csv_path = Path(__file__).resolve().parent.parent / "registry" / "sample_data" / "sample_camera_import.csv"
+        if sample_csv_path.exists():
+            st.caption(f"Sample file available at `{sample_csv_path.relative_to(Path(__file__).resolve().parent.parent)}`")
+        uploaded = st.file_uploader("Upload cameras CSV", type=["csv"])
+        if uploaded is not None:
+            tmp_path = Path("/tmp") / f"registry_import_{uploaded.name}"
+            tmp_path.write_bytes(uploaded.getvalue())
+            try:
+                n_imported, errors = import_cameras_csv(tmp_path)
+                st.success(f"Imported {n_imported} camera(s).")
+                for e in errors:
+                    st.warning(e)
+                if n_imported:
+                    st.rerun()
+            except ValueError as e:
+                st.error(str(e))
